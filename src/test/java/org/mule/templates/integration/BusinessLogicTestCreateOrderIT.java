@@ -63,6 +63,8 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
     private SubflowInterceptingChainLifecycleWrapper deleteOrderInSalesforceFlow;
     private SubflowInterceptingChainLifecycleWrapper deleteOrderInSiebelFlow;
 
+    private SubflowInterceptingChainLifecycleWrapper queryOrderInSalesforceFlowById;
+
     @BeforeClass
     public static void beforeTestClass() {
         // Set polling frequency to 10 seconds
@@ -82,33 +84,12 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         createTestData();
     }
 
-    private void createTestData() throws MuleException, Exception {
-        Map<String, Object> sfOrder = new HashMap<String, Object>();
-        sfOrder.put("EffectiveDate", new Date());  
-        sfOrder.put("Status", "Draft");  
-		sfOrder.put("ContractId", SF_CONTRACT_ID); 
-		sfOrder.put("Pricebook2Id", SF_PRICEBOOK_ID); 
-		sfOrder.put("AccountId", SF_ACCOUNT_ID);
-		sfOrder.put("Description", "sfdc2sieb-order-bidirectional " + new Date(System.currentTimeMillis()));
-        
-		SaveResult res = (SaveResult) createOrderInSalesforceFlow.process(getTestEvent(sfOrder)).getMessage().getPayload();
-		sfOrder.put("Id", res.getId());
-		ordersCreatedInSalesforce.add(res.getId());
-		System.err.println("Order saved " + res.getId());
-		
-		Map<String, Object> sfOrderItem = new HashMap<String, Object>();
-		sfOrderItem.put("OrderId", sfOrder.get("Id"));
-		sfOrderItem.put("Quantity", "1");
-		sfOrderItem.put("UnitPrice", "100");
-		sfOrderItem.put("PricebookEntryId", SF_PRICEBOOK_ENTRY_1);
-		SaveResult res1 = (SaveResult) createOrderInSalesforceFlow.process(getTestEvent(sfOrderItem)).getMessage().getPayload();
-		sfOrderItem.put("Id", res1.getId());
-    }
-
 	@AfterClass
     public static void shutDown() {
         System.clearProperty("poll.frequency");
         System.clearProperty("account.sync.policy");
+        System.clearProperty("watermark.default.expression.sfdc");
+        System.clearProperty("watermark.default.expression.sieb");
     }
 
     @After
@@ -141,38 +122,8 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
     	deleteOrderInSalesforceFlow.initialise();
     	deleteOrderInSiebelFlow = getSubFlow("deleteOrderInSiebelFlow");
     	deleteOrderInSiebelFlow.initialise();
-    }
-
-    private void cleanUpSandboxesByRemovingTestContacts()
-            throws MuleException, Exception {
-
-        final List<String> idList = new ArrayList<String>();
-
-        for (String item : ordersCreatedInSalesforce) {
-            idList.add(item);
-        }
-
-        deleteOrderInSalesforceFlow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));
-        idList.clear();
-
-        for (String contact : ordersCreatedInSiebel) {
-            idList.add(contact);
-        }
-
-        deleteOrderInSiebelFlow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));
-    }
-
-    @Test
-    public void testMainFlow()
-            throws MuleException, Exception {
-    	
-
-        
-        // Execution
-        executeWaitAndAssertBatchJob(SIEBEL_INBOUND_FLOW_NAME);
-
-        // Assertions
-        //Assert.assertEquals("FirstName is not synchronized between systems.", siebelContact.get("First Name"), retrievedContactFromSalesforce.get("FirstName"));
+    	queryOrderInSalesforceFlowById = getSubFlow("queryOrderInSalesforceFlowById");
+    	queryOrderInSalesforceFlowById.initialise();
     }
 
     private void executeWaitAndAssertBatchJob(String flowConstructName)
@@ -185,6 +136,77 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         batchTestHelper.awaitJobTermination(TIMEOUT_MILLIS * 1000, 500);
         batchTestHelper.assertJobWasSuccessful();
     }
+    
+    private void cleanUpSandboxesByRemovingTestContacts()
+            throws MuleException, Exception {
 
+        final List<String> idList = new ArrayList<String>();
+
+        for (String item : ordersCreatedInSalesforce) {
+            idList.add(item);
+        }
+
+        deleteOrderInSalesforceFlow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));
+        idList.clear();
+
+        for (String item : ordersCreatedInSiebel) {
+            deleteOrderInSiebelFlow.process(getTestEvent(item, MessageExchangePattern.REQUEST_RESPONSE));
+        }
+
+    }
+
+    private void createTestData() throws MuleException, Exception {
+        Map<String, Object> sfOrder = new HashMap<String, Object>();
+        sfOrder.put("EffectiveDate", new Date());  
+        sfOrder.put("Status", "Draft");  
+		sfOrder.put("ContractId", SF_CONTRACT_ID); 
+		sfOrder.put("Pricebook2Id", SF_PRICEBOOK_ID); 
+		sfOrder.put("AccountId", SF_ACCOUNT_ID);
+		sfOrder.put("Description", "sfdc2sieb-order-bidirectional " + new Date(System.currentTimeMillis()));
+        
+		SaveResult res = (SaveResult) createOrderInSalesforceFlow.process(getTestEvent(sfOrder)).getMessage().getPayload();
+		sfOrder.put("Id", res.getId());
+		ordersCreatedInSalesforce.add(res.getId());
+		System.err.println("Order saved " + res.getId());
+		
+		Map<String, Object> sfOrderItem = new HashMap<String, Object>();
+		sfOrderItem.put("OrderId", sfOrder.get("Id"));
+		sfOrderItem.put("Quantity", "1");
+		sfOrderItem.put("UnitPrice", "100");
+		sfOrderItem.put("PricebookEntryId", SF_PRICEBOOK_ENTRY_1);
+		SaveResult res1 = (SaveResult) createOrderItemInSalesforceFlow.process(getTestEvent(sfOrderItem)).getMessage().getPayload();
+		sfOrderItem.put("Id", res1.getId());
+
+		System.err.println("Order item saved " + res1.getId());
+    }
+    
+    @Test
+    public void testMainFlow() throws MuleException, Exception {
+    	
+        // Execution
+        executeWaitAndAssertBatchJob(SALESFORCE_INBOUND_FLOW_NAME);
+
+        Map<String, Object> query1 = new HashMap<String, Object>();
+        query1.put("Id", ordersCreatedInSalesforce.get(0));
+        HashMap resp1 = (HashMap) queryOrderInSalesforceFlowById.process(getTestEvent(query1)).getMessage().getPayload();
+        System.err.println(resp1);
+
+        Map<String, Object> query2 = new HashMap<String, Object>();
+        query2.put("OrderNumber", resp1.get("OrderNumber"));
+        ArrayList<HashMap<String, Object>> resp2 = (ArrayList<HashMap<String, Object>>) queryOrderInSiebelFlow.process(getTestEvent(query2)).getMessage().getPayload();
+        System.err.println(resp2);
+        
+        Assert.assertEquals("There should be one order synced in Siebel", 1, resp2.size());
+        String id = (String) resp2.get(0).get("Id");
+		ordersCreatedInSiebel.add(id);
+        
+		Map<String, Object> query3 = new HashMap<String, Object>();
+		query3.put("Id", id);
+		ArrayList<HashMap<String, Object>> resp3 = (ArrayList<HashMap<String, Object>>) queryOrderItemInSiebelFlow.process(getTestEvent(query3)).getMessage().getPayload();
+		System.err.println("order items " + resp3);
+		
+		// Assertions
+        Assert.assertEquals("There should be one order line item synced in Siebel", 1, resp3.size());
+    }
 
 }

@@ -155,6 +155,15 @@ payload.put("Id", id);]]></expression-component>
                 <choice doc:name="Choice">
                     <when expression="#[payload['OrderItems'] != null]">
                         <set-payload value="#[payload['OrderItems']['records']]" doc:name="set Order LineItems to payload"/>
+                        <expression-component doc:name="convert single hashmap to arraylist"><![CDATA[System.err.println("order item class " + payload.getClass());
+if(!(payload instanceof ArrayList))
+{
+    System.err.println("Converting map to array of map");
+	Object backup = payload;
+	payload = new ArrayList();
+	payload.add(backup);
+}
+]]></expression-component>
                         <foreach doc:name="For Each Salesforce LineItem">
                             <logger message="1111 Salesforce order item to insert in Siebel #[payload]" level="INFO" doc:name="log salesforce orderItem"/>
                             <enricher source="#[payload]" target="#[recordVars['product']]" doc:name="store Salesforce Product in 'product'">

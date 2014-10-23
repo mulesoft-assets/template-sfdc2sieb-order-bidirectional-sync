@@ -11,7 +11,8 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/siebel/current/mule-siebel.xsd
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd">
-
+	
+	<!-- 
 	<sfdc:config name="TestSalesforce" username="${test.sfdc.username}"
 		password="${test.sfdc.password}" securityToken="${test.sfdc.securityToken}"
 		url="${test.sfdc.url}" doc:name="Salesforce"
@@ -28,6 +29,7 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
 		<siebel:connection-pooling-profile
 			initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW" />
 	</siebel:config>
+	 -->
 
 	<sub-flow name="createOrderInSalesforceFlow" doc:name="createOrderInSalesforceFlow">
         <sfdc:create-single config-ref="Salesforce" type="Order" doc:name="insert Order in Salesforce">
@@ -39,11 +41,11 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
 	</sub-flow>
     <sub-flow name="createOrderItemInSalesforceFlow" doc:name="createOrderItemInSalesforceFlow">
         <sfdc:create-single config-ref="Salesforce" type="OrderItem" doc:name="insert Salesforce Order Item"/>
-        <logger message="created order #[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="created order item #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
 	<sub-flow name="createOrderInSiebelFlow" doc:name="createOrderInSiebelFlow">
 		<siebel:create-business-component
-			config-ref="TestSiebel" businessObjectComponentType="Contact.Contact"
+			config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders"
 			doc:name="create Order in Siebel">
 			<siebel:business-component-fields
 				ref="#[payload]" />
@@ -55,7 +57,7 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
         <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" doc:name="Oracle Siebel Business Object">
             <siebel:business-component-fields ref="#[payload]"/>
         </siebel:create-business-component>
-        <logger message="created order #[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="created order item #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
 	<sub-flow name="queryOrderInSalesforceFlow" doc:name="queryOrderInSalesforceFlow">
         <sfdc:query-single config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.SiebelOrder__c = '#[payload['Id']]'" doc:name="query Salesforce Order"/>
@@ -77,7 +79,7 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
 			level="INFO" doc:name="Logger" />
 	</sub-flow>
     <sub-flow name="queryOrderItemInSiebelFlow" doc:name="queryOrderItemInSiebelFlow">
-        <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" searchExpression="[Order Header Id] = '#[payload['Id']]'" doc:name="query Order items in Siebel">
+        <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Line Items" searchExpression="[Order Header Id] = '#[payload['Id']]'" doc:name="query Order items in Siebel">
             <siebel:fields-to-retrieve>
                 <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
             </siebel:fields-to-retrieve>
@@ -86,7 +88,7 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
     </sub-flow>
 
 	<sub-flow name="deleteOrderInSalesforceFlow" doc:name="deleteOrderInSalesforceFlow">
-		<sfdc:delete config-ref="TestSalesforce" 
+		<sfdc:delete config-ref="Salesforce" 
 			doc:name="delete Order in Salesforce">
 
 		</sfdc:delete>
@@ -94,14 +96,14 @@ http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/jso
 			message="deleted result #[payload]" doc:name="Logger" />
 	</sub-flow>
 	<sub-flow name="deleteOrderInSiebelFlow" doc:name="deleteOrderInSiebelFlow">
-		<siebel:delete-business-component
-			config-ref="TestSiebel" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders"
-			doc:name="delete Order in Siebel" businessComponentId="#[payload['Id']]">
+        <siebel:delete-business-component config-ref="OracleSiebelBusinessObjects" businessComponentId="#[payload]" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" doc:name="delete Order in Siebel"/>
+        <logger message="deleted result #[payload]" level="INFO" doc:name="Logger"/>
 
-		</siebel:delete-business-component>
-		<logger level="INFO" message="deleted result #[payload]"
-			doc:name="Logger" />
 	</sub-flow>
+    <sub-flow name="queryOrderInSalesforceFlowById" doc:name="queryOrderInSalesforceFlowById">
+        <sfdc:query-single config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.Id = '#[payload['Id']]'" doc:name="query Salesforce Order by id"/>
+        <logger message="salesforce order #[payload]" level="INFO" doc:name="Logger"/>
+    </sub-flow>
 
 
 </mule>
