@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<configuration>
+	<placeholders>
+		<placeholder id="template_name">Salesforce to Siebel Order Bidirectional Sync</placeholder>
+	</placeholders>
+	<sections>
+		<section id="use_case">
+			<![CDATA[
+As a Salesforce admin I want to have my Contacts syncronized between Salesforce and Oracle Siebel Business Objects.
+
+This Template should serve as a foundation for setting an online bi-directional sync of Contacts between Salesforce and Oracle Siebel Business Objects, being able to specify filtering criterias. 
+
+The integration main behaviour is polling for changes (new Contacts or modified ones) that have occured either in Salesforces or Siebel during a certain defined period of time. For those Contacts that both have not been updated yet the integration triggers an upsert (update or create depending the case) taking the last modification as the one that should be applied.
+
+Requirements have been set not only to be used as examples, but also to stablish starting point to adapt the integration to any given requirements.
+
+### Template overview
+Let's say we want to keep Salesforce instance synchronized with Siebel. Then, the integration behavior can be summarized just with the following steps:
+
+1. Ask Salesforce:
+> *Which changes have there been since the last time I got in touch with you?*
+
+2. For each of the updates fetched in the previous step (1.), ask Siebel:
+> *Does the update received from Salesforce should be applied?*
+
+3. If Siebel answer for the previous question (2.) is *Yes*, then *upsert* (create or update depending each particular case) Siebel with the belonging change
+
+4. Repeat previous steps (1. to 3.) the other way around (using Database as source instance and Salesforce as the target one)
+
+ Repeat *ad infinitum*:
+
+5. Ask Salesforce:
+> *Which changes have there been since the question I've made in the step 1.?*
+
+And so on...
+]]>
+		</section>
+		<section id="considerations">
+		<![CDATA[
+To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly. **Failling to do so could lead to unexpected behavior of the template.**
+]]>
+		</section>
+		<section id="application_configuration">
+			<![CDATA[
++ poll.frequency `60000`
++ watermark.default.expression.sfdc `#[System.currentTimeMillis() - 1000 * 60 * 60 * 24]`
++ watermark.default.expression.sieb `#[System.currentTimeMillis() - 1000 * 60 * 60 * 24]`
+
+#### Oracle Siebel Business Objects Connector configuration
++ sieb.user `SADMIN`
++ sieb.password `SADMIN`
++ sieb.server `192.168.10.8`
++ sieb.serverName `SBA_82`
++ sieb.objectManager `EAIObjMgr_enu`
++ sieb.port `2321`
++ sieb.integration.user.id= `A0ed000BO9T`  
++ sieb.timeOffset=`-07:00` - timezone offset between timezone defined in Siebel and GMT 
+
+#### Salesforce Connector configuration
++ sfdc.username `bob.dylan@org`
++ sfdc.password `DylanPassword123`
++ sfdc.securityToken `avsfwCUl7apQs56Xq2AKi3X`
++ sfdc.url `https://login.salesforce.com/services/Soap/u/28.0`
++ sfdc.integration.user.id= `A0ed000BO9T`  
+]]>
+		</section>
+		<section id="api_calls">
+			<![CDATA[
+Salesforce imposes limits on the number of API Calls that can be made. Therefore calculating this amount may be an important factor to consider. The Anypoint Template calls to the API can be calculated using the formula:
+
+***1 + X + X / 200***
+
+Being ***X*** the number of Contacts to be synchronized on each run. 
+
+The division by ***200*** is because, by default, Contacts are gathered in groups of 200 for each Upsert API Call in the commit step. Also consider that this calls are executed repeatedly every polling cycle.	
+
+For instance if 10 records are fetched from origin instance, then 12 api calls will be made (1 + 10 + 1).
+]]>
+		</section>
+		<section id="default_endpoints_xml">
+		<![CDATA[
+This is file is conformed by a Flow containing the Poll that will periodically query either in Salesforce or Siebel for updated/created Contacts that meet the defined criteria in the query. And then executing the batch job process with the query results.
+]]>
+		</section>
+		<section id="default_business_logic_xml">
+		<![CDATA[
+Functional aspect of the Anypoint Template is implemented on this XML, directed by a batch job that will be responsible for creations/updates. The severeal message processors constitute four high level actions that fully implement the logic of this Anypoint Template:
+
+1. Job execution is invoked from triggerFlow (endpoints.xml) everytime there is a new query executed asking for created/updated Contacts.
+2. During the Process stage, each Salesforce contact will be filtered depending on, if it has an existing matching contact in the Siebel and vise versa.
+3. The last step of the Process stage will group the contacts and create/update them either in Salesforce or Siebel.
+Finally during the On Complete stage the Anypoint Template will logoutput statistics data into the console.
+]]>
+		</section>
+	</sections>
+</configuration>

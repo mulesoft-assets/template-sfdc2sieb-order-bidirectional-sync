@@ -1,0 +1,1 @@
+<PropertySet Context="Order" ObjectId="1-51EV" >  <PropertySet Object_spcName="Order Entry - Orders" Business_spcComponent_spcName="Order Entry - Orders" Event_spcType="BusComp" ActionSet="sampleMULE_Order" Context="Order" EventId="1-6TLT" Sub_spcEvent="" Action="Call EAI BS" Event_spcName="WriteRecord" ></PropertySet ></PropertySet >

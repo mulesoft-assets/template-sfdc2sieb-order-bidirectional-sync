@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <soapenv:Body>
+    <notifications xmlns="http://soap.sforce.com/2005/09/outbound">
+      <OrganizationId>00D20000000nW7aEAE</OrganizationId>
+      <ActionId>04k200000001DntAAE</ActionId>
+      <SessionId xsi:nil="true"/>
+      <EnterpriseUrl>https://emea.salesforce.com/services/Soap/c/31.0/00D20000000nW7a</EnterpriseUrl>
+      <PartnerUrl>https://emea.salesforce.com/services/Soap/u/31.0/00D20000000nW7a</PartnerUrl>
+      <Notification>
+        <Id>04l2000000KGZKyAAP</Id>
+        <sObject xsi:type="sf:Order" xmlns:sf="urn:sobject.enterprise.soap.sforce.com">
+          <sf:Id>801200000001AGNAA2</sf:Id>
+          <sf:AccountId>0012000001BJaC1AAL</sf:AccountId>
+          <sf:ActivatedDate>2014-10-02T11:55:48.000Z</sf:ActivatedDate>
+          <sf:BillingCity>City</sf:BillingCity>
+          <sf:BillingCountry>Country</sf:BillingCountry>
+          <sf:BillingState>Province</sf:BillingState>
+          <sf:BillingStreet>ffff</sf:BillingStreet>
+          <sf:ContractId>80020000005mj5dAAA</sf:ContractId>
+          <sf:CreatedById>00520000003LtYCAA0</sf:CreatedById>
+          <sf:CreatedDate>2014-08-25T13:30:45.000Z</sf:CreatedDate>
+          <sf:Description>Order new description 444</sf:Description>
+          <sf:EffectiveDate>2014-08-25</sf:EffectiveDate>
+          <sf:IsDeleted>false</sf:IsDeleted>
+          <sf:IsReductionOrder>false</sf:IsReductionOrder>
+          <sf:LastModifiedById>00520000003LtvGAAS</sf:LastModifiedById>
+          <sf:LastModifiedDate>2014-10-03T10:47:24.000Z</sf:LastModifiedDate>
+          <sf:LastReferencedDate>2014-10-03T10:03:19.000Z</sf:LastReferencedDate>
+          <sf:LastViewedDate>2014-10-03T10:03:19.000Z</sf:LastViewedDate>
+          <sf:OrderNumber>00000101</sf:OrderNumber>
+          <sf:Pricebook2Id>01s20000001SwEQAA0</sf:Pricebook2Id>
+          <sf:ShippingCity>City</sf:ShippingCity>
+          <sf:ShippingCountry>Country</sf:ShippingCountry>
+          <sf:ShippingState>State</sf:ShippingState>
+          <sf:ShippingStreet>Street</sf:ShippingStreet>
+          <sf:SiebelOrder__c>1-87X3</sf:SiebelOrder__c>
+          <sf:Status>Activated</sf:Status>
+          <sf:StatusCode>A</sf:StatusCode>
+          <sf:SystemModstamp>2014-10-03T10:47:24.000Z</sf:SystemModstamp>
+          <sf:TotalAmount>110666.0</sf:TotalAmount>
+          <sf:TotalAmount__c>222.0</sf:TotalAmount__c>
+        </sObject>
+      </Notification>
+    </notifications>
+  </soapenv:Body>
+</soapenv:Envelope>

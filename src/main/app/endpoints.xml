@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:spring="http://www.springframework.org/schema/beans"
+      version="EE-3.5.1"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/siebel/current/mule-siebel.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd">
+    <flow name="fromSalesforceToSiebelFlow" doc:name="fromSalesforceToSiebelFlow" initialState="started" processingStrategy="synchronous">
+        <poll doc:name="Poll">
+            <fixed-frequency-scheduler frequency="${polling.frequency}" startDelay="4000"/>
+            <watermark variable="salesforceLastQueryDate" default-expression="${watermark.default.expression.sfdc}" selector="MAX" selector-expression="#[payload.LastModifiedDate]"/>
+            <processor-chain doc:name="Processor Chain">
+                <expression-component doc:name="acquire Lock"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
+                <sfdc:query config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.LastModifiedDate &gt; #[flowVars['salesforceLastQueryDate']]" doc:name="fetch Orders from Salesforce with filtering criteria"/>
+
+            </processor-chain>
+        </poll>
+        <logger message="111 #[payload.size()]" level="INFO" doc:name="Logger"/>
+        <batch:execute name="fromSalesforceToSiebelBatch" doc:name="trigger fromSalesforceToSiebelBatch"/>
+
+        <exception-strategy ref="defaultChoiceExceptionStrategy" doc:name="catch Exception and call defaultChoiceExceptionStrategy"/>
+    </flow>
+
+    <flow name="fromSiebelToSalesforceFlow" doc:name="fromSiebelToSalesforceFlow" initialState="started" processingStrategy="synchronous">
+        <poll doc:name="Poll">
+            <fixed-frequency-scheduler frequency="${polling.frequency}" startDelay="2000"/>
+            <watermark variable="siebelLastQueryDate" default-expression="${watermark.default.expression.sieb}" selector="FIRST" selector-expression="#[org.joda.time.format.DateTimeFormat.forPattern(&quot;MM/dd/yy HH:mm:ss&quot;).parseMillis(payload['Updated'])]"/>
+            <processor-chain doc:name="Processor Chain">
+                <expression-component doc:name="acquire Lock"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
+                <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" searchExpression="[Updated] &gt; '#[org.joda.time.format.DateTimeFormat.forPattern(&quot;MM/dd/yyyy HH:mm:ss&quot;).print(flowVars['siebelLastQueryDate'])]'" doc:name="fetch Orders from Siebel with filtering criteria">
+                    <siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Updated</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Order Number</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Account</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Order Date</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Updated By</siebel:fields-to-retrieve>
+
+                    	<!-- 
+                        <siebel:fields-to-retrieve>Account Number</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Annual Revenue</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Bill To City</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Bill To Country</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Bill To Postal Code</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Bill To State</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Bill To Street Address</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Description</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Fax Number</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Last Update - SDQ</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Name</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Employees</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Phone Number</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Rate</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Ship To City</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Ship To Country</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Ship To Postal Code</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Ship To State</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Ship To Street Address</siebel:fields-to-retrieve>
+                        <siebel:fields-to-retrieve>Home Page</siebel:fields-to-retrieve>
+                    	 -->
+                    </siebel:fields-to-retrieve>
+                </siebel:query-business-components>
+            </processor-chain>
+        </poll>
+        <logger message="222 #[payload.size()] '#[org.joda.time.format.DateTimeFormat.forPattern(&quot;M/d/y H:m:s&quot;).print(flowVars['siebelLastQueryDate'])]'" level="INFO" doc:name="Logger"/>
+        <batch:execute name="fromSiebelToSalesforceBatch" doc:name="trigger fromSiebelToSalesforceBatch"/>
+
+        <exception-strategy ref="defaultChoiceExceptionStrategy" doc:name="catch Exception and call defaultChoiceExceptionStrategy"/>
+    </flow>
+
+
+
+</mule>
