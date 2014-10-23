@@ -26,11 +26,11 @@ Note that using this template is subject to the conditions of this [License Agre
 Please review the terms of the license before downloading and using this template. In short, you are allowed to use the template for free with Mule ESB Enterprise Edition, CloudHub, or as a trial in Anypoint Studio.
 
 # Use Case <a name="usecase"/>
-As a Salesforce admin I want to have my Contacts syncronized between Salesforce and Oracle Siebel Business Objects.
+As a Salesforce admin I want to have my Orders syncronized between Salesforce and Oracle Siebel Business Objects.
 
-This Template should serve as a foundation for setting an online bi-directional sync of Contacts between Salesforce and Oracle Siebel Business Objects, being able to specify filtering criterias. 
+This Template should serve as a foundation for setting an online bi-directional sync of Orders between Salesforce and Oracle Siebel Business Objects, being able to specify filtering criterias. 
 
-The integration main behaviour is polling for changes (new Contacts or modified ones) that have occured either in Salesforces or Siebel during a certain defined period of time. For those Contacts that both have not been updated yet the integration triggers an upsert (update or create depending the case) taking the last modification as the one that should be applied.
+The integration main behaviour is polling for changes (new Order or modified ones) that have occured either in Salesforces or Siebel during a certain defined period of time. For those Orders that both have not been updated yet the integration triggers an upsert (update or create depending the case) taking the last modification as the one that should be applied.
 
 Requirements have been set not only to be used as examples, but also to stablish starting point to adapt the integration to any given requirements.
 
@@ -57,6 +57,8 @@ And so on...
 # Considerations <a name="considerations"/>
 
 To make this Anypoint Template run, there are certain preconditions that must be considered. All of them deal with the preparations in both, that must be made in order for all to run smoothly. **Failling to do so could lead to unexpected behavior of the template.**
++ Add text custom field SiebelOrder__c to Order object. This will store Siebel Order Header Id, which is then used to find the matching existing order in Siebel.
++ Add text custom field SiebelExternalId__c to Product2 object. And fill it with appropriate value of matching Product Id from Siebel. There should be 1 to 1 relation between Products in Salesforce and Siebel.
 
 
 
@@ -119,7 +121,7 @@ There are no particular considerations for this Anypoint Template regarding Sieb
 
 
 # Run it! <a name="runit"/>
-Simple steps to get Salesforce to Siebel Contact Bidirectional Sync running.
+Simple steps to get Salesforce to Siebel Order Bidirectional Sync running.
 
 
 ## Running on premise <a name="runonopremise"/>
@@ -188,18 +190,19 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 + sfdc.password `DylanPassword123`
 + sfdc.securityToken `avsfwCUl7apQs56Xq2AKi3X`
 + sfdc.url `https://login.salesforce.com/services/Soap/u/28.0`
-+ sfdc.integration.user.id= `A0ed000BO9T`
+
++ sfdc.integration.user.id= `A0ed000BO9T`  
++ sfdc.contract.id=80020000005mj5d  - id of existing contract which is used during Order creation
++ sfdc.pricebook.id=01s20000001SwEQAA0
 
 # API Calls <a name="apicalls"/>
 Salesforce imposes limits on the number of API Calls that can be made. Therefore calculating this amount may be an important factor to consider. The Anypoint Template calls to the API can be calculated using the formula:
 
-***1 + X + X / 200***
+***1 + 2*X + X / 200 + Y ***
 
-Being ***X*** the number of Contacts to be synchronized on each run. 
+Being ***X*** the number of Orders to be synchronized on each run and ***Y*** the number of Order line Items. 
 
-The division by ***200*** is because, by default, Contacts are gathered in groups of 200 for each Upsert API Call in the commit step. Also consider that this calls are executed repeatedly every polling cycle.	
-
-For instance if 10 records are fetched from origin instance, then 12 api calls will be made (1 + 10 + 1).
+The division by ***200*** is because, by default, Orders are gathered in groups of 200 for each Upsert API Call in the commit step. Also consider that this calls are executed repeatedly every polling cycle.
 
 
 # Customize It!<a name="customizeit"/>
