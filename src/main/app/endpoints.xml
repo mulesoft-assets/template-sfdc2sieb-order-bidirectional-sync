@@ -14,7 +14,49 @@ http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/s
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
 http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd">
-    <flow name="fromSalesforceToSiebelFlow" doc:name="fromSalesforceToSiebelFlow" initialState="started" processingStrategy="synchronous">
+    <data-mapper:config name="XML_Order_To_Salesforce" transformationGraphPath="xml_order_to_salesforce.grf" doc:name="XML_Order_To_Salesforce"/>
+    <data-mapper:config name="XML_To_Map" transformationGraphPath="xml_to_map_1.grf" doc:name="XML_To_Map"/>    
+    <flow name="fromSalesforceToSiebelPushNotificationFlow" doc:name="fromSalesforceToSiebelPushNotificationFlow">
+        <http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="${http.port}" path="salesforce" doc:name="HTTP"/>
+        <data-mapper:transform config-ref="XML_Order_To_Salesforce" doc:name="XML Order To Salesforce"/>
+        <choice doc:name="Choice">
+            <when expression="#[payload['LastModifiedById'] != '${sfdc.integration.user.id}']">
+                <sfdc:query config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.Id = '#[payload['Id']]'" doc:name="fetch Order from Salesforce by Id"/>
+                <expression-component doc:name="acquire Lock"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
+                <batch:execute name="fromSalesforceToSiebelBatch" doc:name="trigger fromSalesforceToSiebelBatch"/>
+            </when>
+            <otherwise>
+                <logger message="skip request" level="INFO" doc:name="skip request"/>
+            </otherwise>
+        </choice>
+        <set-payload value="&lt;soapenv:Envelope xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/' xmlns:out='http://soap.sforce.com/2005/09/outbound'&gt;&lt;soapenv:Header/&gt;&lt;soapenv:Body&gt;&lt;out:notificationsResponse&gt;&lt;out:Ack&gt;true&lt;/out:Ack&gt;&lt;/out:notificationsResponse&gt;&lt;/soapenv:Body&gt;&lt;/soapenv:Envelope&gt;" doc:name="set response"/>
+        <http:response-builder status="200" contentType="application/xml" doc:name="HTTP Response Builder"/>
+    </flow>
+    <flow name="fromSiebelToSalesforcePushNotificationFlow" doc:name="fromSiebelToSalesforcePushNotificationFlow">
+        <http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="${http.port}" path="siebel" doc:name="HTTP"/>
+        <data-mapper:transform config-ref="XML_To_Map" doc:name="XML To Map"/>
+        <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" searchExpression="[Id] = '#[payload['Id']]'" doc:name="fetch Order from Siebel by Id">
+            <siebel:fields-to-retrieve>
+                <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
+                <siebel:fields-to-retrieve>Updated</siebel:fields-to-retrieve>
+                <siebel:fields-to-retrieve>Order Number</siebel:fields-to-retrieve>
+                <siebel:fields-to-retrieve>Account</siebel:fields-to-retrieve>
+                <siebel:fields-to-retrieve>Order Date</siebel:fields-to-retrieve>
+                <siebel:fields-to-retrieve>Updated By</siebel:fields-to-retrieve>
+            </siebel:fields-to-retrieve>
+        </siebel:query-business-components>
+        <choice doc:name="Choice">
+            <when expression="#[payload[0]['Updated By'] != '${sieb.integration.user.id}']">
+                <expression-component doc:name="acquire Lock"><![CDATA[app.registry['PollSynchronizer'].lock();]]></expression-component>
+                <batch:execute name="fromSiebelToSalesforceBatch" doc:name="trigger fromSiebelToSalesforceBatch"/>
+            </when>
+            <otherwise>
+                <logger message="skipping request" level="INFO" doc:name="skip request"/>
+            </otherwise>
+        </choice>
+        <http:response-builder status="200" contentType="application/xml" doc:name="HTTP Response Builder"/>
+    </flow>
+    <flow name="fromSalesforceToSiebelFlow" doc:name="fromSalesforceToSiebelFlow"  processingStrategy="synchronous">
         <poll doc:name="Poll">
             <fixed-frequency-scheduler frequency="${polling.frequency}" startDelay="4000"/>
             <watermark variable="salesforceLastQueryDate" default-expression="${watermark.default.expression.sfdc}" selector="MAX" selector-expression="#[payload.LastModifiedDate]"/>
@@ -30,7 +72,7 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
         <exception-strategy ref="defaultChoiceExceptionStrategy" doc:name="catch Exception and call defaultChoiceExceptionStrategy"/>
     </flow>
 
-    <flow name="fromSiebelToSalesforceFlow" doc:name="fromSiebelToSalesforceFlow" initialState="started" processingStrategy="synchronous">
+    <flow name="fromSiebelToSalesforceFlow" doc:name="fromSiebelToSalesforceFlow"  processingStrategy="synchronous">
         <poll doc:name="Poll">
             <fixed-frequency-scheduler frequency="${polling.frequency}" startDelay="2000"/>
             <watermark variable="siebelLastQueryDate" default-expression="${watermark.default.expression.sieb}" selector="FIRST" selector-expression="#[org.joda.time.format.DateTimeFormat.forPattern(&quot;MM/dd/yy HH:mm:ss&quot;).parseMillis(payload['Updated'])]"/>
