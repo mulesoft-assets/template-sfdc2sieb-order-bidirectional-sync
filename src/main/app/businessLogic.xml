@@ -71,22 +71,25 @@ payload.put("Id", id);]]></expression-component>
                         <logger message="1111 Siebel Account already exists" level="INFO" doc:name="do nothing"/>
                     </otherwise>
                 </choice>
+                <logger message="111111 expression result : #[recordVars['siebelOrder'] is NullPayload || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars['siebelOrder']['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate'])) &amp;&amp; '${sfdc.integration.user.id}' != payload['LastModifiedById']]" level="INFO" doc:name="Logger"/>
             
             </batch:step>
             <batch:step name="forEachOrderUpsertSiebelOrderStep" accept-expression="recordVars['siebelOrder'] is NullPayload || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars['siebelOrder']['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate'])) &amp;&amp; '${sfdc.integration.user.id}' != payload['LastModifiedById']">
+                <logger message="11111 here " level="INFO" doc:name="Logger"/>
                 <choice doc:name="Choice">
                     <when expression="recordVars['siebelOrder'] is NullPayload">
                         <enricher source="#[payload]" target="#[recordVars['upsertedSiebelOrder']]" doc:name="store insert result in 'upsertedSiebelOrder'">
                             <processor-chain doc:name="Processor Chain">
+                                <logger message="11111 iiiiiiinseerrt #[recordVars['siebelAccount']] #[payload]" level="INFO" doc:name="Logger"/>
                                 <siebel:upsert-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" doc:name="insert Order in Siebel">
                                     <siebel:business-component-fields>
                                         <siebel:business-component-field key="Order Type">Sales Order</siebel:business-component-field>
                                         <siebel:business-component-field key="Currency Code">USD</siebel:business-component-field>
                                         <siebel:business-component-field key="Account Id">#[recordVars['siebelAccount']['Id']]</siebel:business-component-field>
                                         <siebel:business-component-field key="Order Number">#[payload['OrderNumber']]</siebel:business-component-field>
-                                        <siebel:business-component-field key="Description">#[payload['Description']]</siebel:business-component-field>
                                     </siebel:business-component-fields>
                                 </siebel:upsert-business-component>
+                                <logger message="3333333 #[payload]" level="INFO" doc:name="Logger"/>
                                 <expression-component doc:name="save result into payload"><![CDATA[// convert payload to hashMap
 String id = payload.getCreatedObjects().get(0);
 payload = new HashMap();

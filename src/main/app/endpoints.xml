@@ -16,7 +16,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd">
     <data-mapper:config name="XML_Order_To_Salesforce" transformationGraphPath="xml_order_to_salesforce.grf" doc:name="XML_Order_To_Salesforce"/>
     <data-mapper:config name="XML_To_Map" transformationGraphPath="xml_to_map_1.grf" doc:name="XML_To_Map"/>    
-    <flow name="fromSalesforceToSiebelPushNotificationFlow" doc:name="fromSalesforceToSiebelPushNotificationFlow">
+    <flow name="fromSalesforceToSiebelPushNotificationFlow" doc:name="fromSalesforceToSiebelPushNotificationFlow" initialState="stopped">
         <http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="${http.port}" path="salesforce" doc:name="HTTP"/>
         <data-mapper:transform config-ref="XML_Order_To_Salesforce" doc:name="XML Order To Salesforce"/>
         <choice doc:name="Choice">
@@ -32,7 +32,7 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
         <set-payload value="&lt;soapenv:Envelope xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/' xmlns:out='http://soap.sforce.com/2005/09/outbound'&gt;&lt;soapenv:Header/&gt;&lt;soapenv:Body&gt;&lt;out:notificationsResponse&gt;&lt;out:Ack&gt;true&lt;/out:Ack&gt;&lt;/out:notificationsResponse&gt;&lt;/soapenv:Body&gt;&lt;/soapenv:Envelope&gt;" doc:name="set response"/>
         <http:response-builder status="200" contentType="application/xml" doc:name="HTTP Response Builder"/>
     </flow>
-    <flow name="fromSiebelToSalesforcePushNotificationFlow" doc:name="fromSiebelToSalesforcePushNotificationFlow">
+    <flow name="fromSiebelToSalesforcePushNotificationFlow" doc:name="fromSiebelToSalesforcePushNotificationFlow" initialState="stopped">
         <http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="${http.port}" path="siebel" doc:name="HTTP"/>
         <data-mapper:transform config-ref="XML_To_Map" doc:name="XML To Map"/>
         <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" searchExpression="[Id] = '#[payload['Id']]'" doc:name="fetch Order from Siebel by Id">

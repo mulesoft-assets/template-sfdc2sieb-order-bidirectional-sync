@@ -42,7 +42,7 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
     private static final String ANYPOINT_TEMPLATE_NAME = "sfdc2sieb-order-bidirectional-sync";
     private static final String SALESFORCE_INBOUND_FLOW_NAME = "fromSalesforceToSiebelFlow";
     private static final String SIEBEL_INBOUND_FLOW_NAME = "fromSiebelToSalesforceFlow";
-    private static final int TIMEOUT_MILLIS = 60;
+    private static final int TIMEOUT_MILLIS = 180;
 
 	public static final String SF_ACCOUNT_ID = "0012000001BJaC1";
 	public static final String SF_CONTRACT_ID = "80020000005mj5d";
@@ -69,6 +69,7 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
     public static void beforeTestClass() {
         // Set polling frequency to 10 seconds
         System.setProperty("poll.frequency", "10000");
+        System.setProperty("mule.test.timeoutSecs", "180");
         System.setProperty("account.sync.policy", "syncAccount");
         
 		DateTime now = new DateTime(DateTimeZone.UTC);
