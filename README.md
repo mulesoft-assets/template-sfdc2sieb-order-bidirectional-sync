@@ -66,7 +66,7 @@ For setting up Push notification these extra steps needs to be done
 + Define Salesforce outbound messaging and a simple workflow rule on Order object. [This article will show you how to accomplish this](https://www.salesforce.com/us/developer/docs/api/Content/sforce_api_om_outboundmessaging_setting_up.htm). The most important setting here is the `Endpoint URL` which needs to point to your application running on Cloudbhub, eg. `http://yourapp.cloudhub.io:80`. Additionaly, try to add just few fields to the `Fields to Send` to keep it simple for begin.
 + Deploy custom script to your Siebel instance which will send notification to the Siebel Inbound Http connector whenever order in Siebel is updated.
 + Set Initial State of Pollinn inbound flows to Stopped and Http inboud flows to Started.
-+ Deploy the template to Cloudhub as the Push Notification.
++ Deploy the template to Cloudhub.
 
 
 
