@@ -52,8 +52,9 @@ For setting up Push notification these extra steps needs to be done
 		</section>
 		<section id="application_configuration">
 			<![CDATA[
++ http.port `8080`
 + poll.frequency `60000`
-+ watermark.default.expression.sfdc `#[System.currentTimeMillis() - 1000 * 60 * 60 * 24]`
++ watermark.default.expression.sfdc `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('UTC'))]`
 + watermark.default.expression.sieb `#[System.currentTimeMillis() - 1000 * 60 * 60 * 24]`
 
 #### Oracle Siebel Business Objects Connector configuration
