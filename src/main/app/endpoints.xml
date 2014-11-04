@@ -56,7 +56,7 @@ http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schem
         </choice>
         <http:response-builder status="200" contentType="application/xml" doc:name="HTTP Response Builder"/>
     </flow>
-    <flow name="fromSalesforceToSiebelFlow" doc:name="fromSalesforceToSiebelFlow"  processingStrategy="synchronous">
+    <flow name="fromSalesforceToSiebelFlow" doc:name="fromSalesforceToSiebelFlow"  processingStrategy="synchronous" >
         <poll doc:name="Poll">
             <fixed-frequency-scheduler frequency="${polling.frequency}" startDelay="4000"/>
             <watermark variable="salesforceLastQueryDate" default-expression="${watermark.default.expression.sfdc}" selector="MAX" selector-expression="#[payload.LastModifiedDate]"/>
