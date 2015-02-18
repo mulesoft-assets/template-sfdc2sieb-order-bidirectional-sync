@@ -70,7 +70,6 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         // Set polling frequency to 10 seconds
         System.setProperty("poll.frequency", "10000");
         System.setProperty("mule.test.timeoutSecs", "180");
-        System.setProperty("account.sync.policy", "syncAccount");
         
 		DateTime now = new DateTime(DateTimeZone.UTC);
 		DateTimeFormatter dateFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
@@ -88,7 +87,6 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
 	@AfterClass
     public static void shutDown() {
         System.clearProperty("poll.frequency");
-        System.clearProperty("account.sync.policy");
         System.clearProperty("watermark.default.expression.sfdc");
         System.clearProperty("watermark.default.expression.sieb");
     }
