@@ -6,17 +6,13 @@
 	<parent>
 		<groupId>org.mule.templates</groupId>
 		<artifactId>templates-tooling-parent-pom</artifactId>
-		<version>1.0.7</version>
+		<version>1.1.9</version>
 	</parent>
 
 	<artifactId>template-sfdc2sieb-order-bidirectional-sync</artifactId>
 	<packaging>mule</packaging>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.1.0-SNAPSHOT</version>
 	<name>template-sfdc2sieb-order-bidirectional-sync Anypoint Template Project</name>
-
-	<properties>
-		<siebel.version>2.0.0</siebel.version>
-	</properties>
 
 	<build>
 		<plugins>
@@ -45,7 +41,7 @@
 		<dependency>
 			<groupId>org.mule.modules</groupId>
 			<artifactId>mule-module-siebel</artifactId>
-			<version>${siebel.version}</version>
+			<version>${sieb.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mule.modules</groupId>
@@ -82,6 +78,12 @@
 			<version>8.1.1.11</version>
 			<scope>test</scope>
 		</dependency>
+    <dependency>
+            <groupId>org.mule.modules</groupId>
+            <artifactId>mule-module-http</artifactId>
+            <version>${mule.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
 	<repositories>
