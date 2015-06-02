@@ -26,9 +26,9 @@ Note that using this template is subject to the conditions of this [License Agre
 Please review the terms of the license before downloading and using this template. In short, you are allowed to use the template for free with Mule ESB Enterprise Edition, CloudHub, or as a trial in Anypoint Studio.
 
 # Use Case <a name="usecase"/>
-As a Salesforce admin I want to have my Orders syncronized between Salesforce and Oracle Siebel Business Objects.
+As a Salesforce admin I want to have my Orders synchronized between Salesforce and Oracle Siebel Business Objects.
 
-This Template should serve as a foundation for setting an online bi-directional sync of Orders between Salesforce and Oracle Siebel Business Objects, being able to specify filtering criterias. 
+This Template should serve as a foundation for setting an online bi-directional sync of Orders between Salesforce and Oracle Siebel Business Objects, being able to specify filtering criteria. 
 
 The integration main behaviour is polling for changes (new Order or modified ones) that have occured either in Salesforces or Siebel during a certain defined period of time. For those Orders that both have not been updated yet the integration triggers an upsert (update or create depending the case) taking the last modification as the one that should be applied.
 
@@ -186,8 +186,8 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 ### Application configuration
 + http.port `8080`
 + poll.frequency `60000`
-+ watermark.default.expression.sfdc `#[groovy: new Date(System.currentTimeMillis() - 10000).format("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone.getTimeZone('UTC'))]`
-+ watermark.default.expression.sieb `#[System.currentTimeMillis() - 1000 * 60 * 60 * 24]`
++ watermark.default.expression.sfdc `YESTERDAY`
++ watermark.default.expression.sieb `"05/19/2015 10:00:00"`
 
 #### Oracle Siebel Business Objects Connector configuration
 + sieb.user `SADMIN`
