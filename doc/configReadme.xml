@@ -108,7 +108,7 @@ Functional aspect of the Anypoint Template is implemented in this XML, directed 
 1. Job execution is invoked from triggerFlow (endpoints.xml) everytime there is a new query executed asking for created/updated Contacts.
 2. During the Process stage, each Salesforce contact will be filtered depending on, if it has an existing matching contact in the Siebel and vise versa.
 3. The last step of the Process stage will group the contacts and create/update them either in Salesforce or Siebel.
-Finally during the On Complete stage the Anypoint Template will logout statistics data into the console.
+Finally during the On Complete stage the Anypoint Template will log statistics data into the console.
 ]]>
 		</section>
 	</sections>

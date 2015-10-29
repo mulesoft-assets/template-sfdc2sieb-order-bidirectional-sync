@@ -255,8 +255,6 @@ payload when (payload is :array) otherwise [payload]
             <batch:step name="upsertOrderInSalesforceStep" accept-expression="recordVars.salesforceOrder == null || org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(payload.Updated, 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVarssalesforceOrder.LastModifiedDate))">
                 <enricher source="#[payload]" target="#[recordVars.orderToUpsert]" doc:name="store result in 'orderToUpsert'">
                     <processor-chain doc:name="Processor Chain">
-                        <expression-component doc:name="Expression"><![CDATA[payload.put("EffectiveDate",org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset( payload['Order Date'], 'MM/dd/yyyy HH:mm:ss', '-07:00').toDate());  
-]]></expression-component>
                         <dw:transform-message doc:name="Prepare Order">
                             <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
@@ -268,12 +266,13 @@ payload when (payload is :array) otherwise [payload]
 	Status         : 'Draft',
 	Pricebook2Id   : p('sfdc.pricebook.id'),
 	SiebelOrder__c : payload.Id,
-	EffectiveDate  : payload.EffectiveDate
+	EffectiveDate  : (payload.'Order Date' as :localdatetime {format: "MM/dd/yyyy HH:mm:ss"}) ++ ("-07:00" as :timezone)
 	
 } when (recordVars.salesforceOrder == null) 
 otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
                         </dw:transform-message>
                         <logger message="orderToUpsert: #[payload]" level="INFO" doc:name="Logger"/>
+
                     </processor-chain>
 
                 </enricher>
@@ -281,12 +280,10 @@ otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
                     <when expression="#[recordVars.salesforceOrder == null]">
                         <logger message="Before order insert: #[payload]" level="INFO" doc:name="Log before insert"/>
                         <enricher source="#[payload.getId()]" target="#[recordVars.orderId]" doc:name="store result in 'orderId'">
-                            <processor-chain doc:name="Processor Chain">
-                                <sfdc:create-single config-ref="Salesforce" type="Order" doc:name="Insert single Order in Salesforce">
-                                    <sfdc:object ref="#[recordVars.orderToUpsert]"/>
-                                </sfdc:create-single>
+                            <sfdc:create-single config-ref="Salesforce" type="Order" doc:name="Insert single Order in Salesforce">
+                                <sfdc:object ref="#[recordVars.orderToUpsert]"/>
+                            </sfdc:create-single>
 
-                            </processor-chain>
                         </enricher>
 
 
@@ -295,12 +292,10 @@ otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
                         <logger message="Before order update: #[payload]" level="INFO" doc:name="Log before update"/>
 
                         <enricher source="#[payload.getId()]" target="#[recordVars.orderId]" doc:name="store result in 'orderId'">
-                            <processor-chain doc:name="Processor Chain">
-                                <sfdc:update-single config-ref="Salesforce" type="Order" doc:name="Update single Order in Salesforce">
-                                    <sfdc:object ref="#[recordVars.orderToUpsert]"/>
-                                </sfdc:update-single>
+                            <sfdc:update-single config-ref="Salesforce" type="Order" doc:name="Update single Order in Salesforce">
+                                <sfdc:object ref="#[recordVars.orderToUpsert]"/>
+                            </sfdc:update-single>
 
-                            </processor-chain>
                         </enricher>
                     </otherwise>
                 </choice>
@@ -361,12 +356,7 @@ payload map $.Id]]></dw:set-payload>
                                         </sfdc:object>
                                     </sfdc:create-single>
                                     <logger message="Created new pricebook entry #[payload]" level="INFO" doc:name="Log new pricebook entry"/>
-                                    <dw:transform-message doc:name="extract Id">
-                                        <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
----
-payload.id]]></dw:set-payload>
-                                    </dw:transform-message>
+                                    <set-payload value="#[payload.getId()]" doc:name="Set Payload"/>
 
                                 </when>
                                 <otherwise>
