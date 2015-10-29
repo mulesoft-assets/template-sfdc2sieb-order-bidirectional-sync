@@ -1,52 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:spring="http://www.springframework.org/schema/beans" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc"
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc"
 	xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel"
 	xmlns="http://www.mulesoft.org/schema/mule/core"
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	version="EE-3.6.2"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/siebel/current/mule-siebel.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd">
-
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+	<siebel:config name="OracleSiebelBusinessObjects_test" user="${test.sieb.user}" password="${test.sieb.password}" server="${test.sieb.server}" serverName="${test.sieb.serverName}" objectManager="${test.sieb.objectManager}" doc:name="Oracle Siebel Business Objects" doc:description="Destination Oracle Siebel Business Objects instance. This is the destination organization, where accounts will be migrated to." port="${sieb.port}"  >
+        <siebel:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
+        <reconnect-forever />
+    </siebel:config>
 	<sub-flow name="createOrderInSalesforceFlow" >
         <sfdc:create-single config-ref="Salesforce" type="Order" doc:name="Insert Order in Salesforce">
             <sfdc:object ref="#[payload]"/>
         </sfdc:create-single>
 
-		<logger message="created order #[payload]"
+		<logger message="Create Salesforce Order result: #[payload]"
 			level="INFO" doc:name="Logger" />
 	</sub-flow>
     <sub-flow name="createOrderItemInSalesforceFlow" >
         <sfdc:create-single config-ref="Salesforce" type="OrderItem" doc:name="Insert Salesforce Order Item"/>
-        <logger message="created order item #[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="Create Salesforce Order Item result: #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
 	<sub-flow name="createOrderInSiebelFlow" >
+        <logger message="Creating Siebel Order: #[payload]" level="INFO" doc:name="Logger"/>
 		<siebel:create-business-component
-			config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders"
+			config-ref="OracleSiebelBusinessObjects_test" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders"
 			doc:name="Create Order in Siebel">
 			<siebel:business-component-fields
 				ref="#[payload]" />
 		</siebel:create-business-component>
-		<logger message="created order #[payload]"
+		<logger message="Created Siebel Order result: #[payload]"
 			level="INFO" doc:name="Logger" />
 	</sub-flow>
     <sub-flow name="createOrderItemInSiebelFlow" >
-        <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" doc:name="Oracle Siebel Business Object">
+        <logger message="Creating Siebel Order Item: #[payload]" level="INFO" doc:name="Logger"/>
+        <siebel:create-business-component config-ref="OracleSiebelBusinessObjects_test" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" doc:name="Oracle Siebel Business Object">
             <siebel:business-component-fields ref="#[payload]"/>
         </siebel:create-business-component>
-        <logger message="created order item #[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="Create Siebel Order Item result: #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
 	<sub-flow name="queryOrderInSalesforceFlow" >
-        <sfdc:query-single config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.SiebelOrder__c = '#[payload['Id']]'" doc:name="Query Salesforce Order"/>
+        <logger message="Creating Siebel Order Item: #[payload]" level="INFO" doc:name="Logger"/>
+        <sfdc:query-single config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.SiebelOrder__c = '#[payload]'" doc:name="Query Salesforce Order"/>
 
-		<logger message="salesforce order #[payload]"
+		<logger message="Salesforce order query response: #[payload]"
 			level="INFO" doc:name="Logger" />
 	</sub-flow>
+    <sub-flow name="queryOrderInSalesforceFlowById">
+        <logger message="Querying Salesforce for Order: #[payload]" level="INFO" doc:name="Logger"/>
+        <sfdc:query-single config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.Id = '#[payload]'" doc:name="Query Salesforce Order by id"/>
+        <logger message="Salesforce Order query response: #[payload]" level="INFO" doc:name="Logger"/>
+    </sub-flow>
 	<sub-flow name="queryOrderInSiebelFlow" >
-        <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" searchExpression="[Order Number] = '#[payload['OrderNumber']]'" doc:name="Query Siebel Order">
+        <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" searchExpression="[Order Number] = '#[payload]'" doc:name="Query Siebel Order">
             <siebel:fields-to-retrieve>
                 <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
                 <siebel:fields-to-retrieve>Updated</siebel:fields-to-retrieve>
@@ -55,35 +68,32 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
             </siebel:fields-to-retrieve>
         </siebel:query-business-components>
 
-		<logger message="siebel order #[payload]"
+		<logger message="Siebel order query result: #[payload]"
 			level="INFO" doc:name="Logger" />
 	</sub-flow>
     <sub-flow name="queryOrderItemInSiebelFlow" >
-        <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Line Items" searchExpression="[Order Header Id] = '#[payload['Id']]'" doc:name="Query Order items in Siebel">
+        <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Line Items" searchExpression="[Order Header Id] = '#[payload]'" doc:name="Query Order items in Siebel">
             <siebel:fields-to-retrieve>
                 <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
             </siebel:fields-to-retrieve>
         </siebel:query-business-components>
-        <logger message="siebel order items #[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="Siebel Order Items query response: #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
 
-	<sub-flow name="deleteOrderInSalesforceFlow" >
+	<sub-flow name="deleteObjectFromSalesforceFlow" >
 		<sfdc:delete config-ref="Salesforce" 
-			doc:name="Delete Order in Salesforce">
+			doc:name="Delete Object from Salesforce">
 
 		</sfdc:delete>
 		<logger level="INFO"
-			message="deleted result #[payload]" doc:name="Logger" />
+			message="Delete Salesforce Order result: #[payload]" doc:name="Logger" />
 	</sub-flow>
 	<sub-flow name="deleteOrderInSiebelFlow" >
         <siebel:delete-business-component config-ref="OracleSiebelBusinessObjects" businessComponentId="#[payload]" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" doc:name="Delete Order in Siebel"/>
-        <logger message="deleted result #[payload]" level="INFO" doc:name="Logger"/>
+        <logger message="Delete Siebel Order result: #[payload]" level="INFO" doc:name="Logger"/>
 
 	</sub-flow>
-    <sub-flow name="queryOrderInSalesforceFlowById" >
-        <sfdc:query-single config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.Id = '#[payload['Id']]'" doc:name="Query Salesforce Order by id"/>
-        <logger message="salesforce order #[payload]" level="INFO" doc:name="Logger"/>
-    </sub-flow>
+
 
 
 </mule>
