@@ -266,7 +266,7 @@ payload when (payload is :array) otherwise [payload]
 	Status         : 'Draft',
 	Pricebook2Id   : p('sfdc.pricebook.id'),
 	SiebelOrder__c : payload.Id,
-	EffectiveDate  : (payload.'Order Date' as :localdatetime {format: "MM/dd/yyyy HH:mm:ss"}) ++ ("-07:00" as :timezone)
+	EffectiveDate  : (payload.'Order Date' as :localdatetime {format: "MM/dd/yyyy HH:mm:ss"}) ++ (p('sieb.timeOffset') as :timezone)
 	
 } when (recordVars.salesforceOrder == null) 
 otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
