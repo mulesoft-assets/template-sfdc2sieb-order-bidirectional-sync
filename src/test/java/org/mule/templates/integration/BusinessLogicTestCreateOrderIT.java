@@ -23,7 +23,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mule.MessageExchangePattern;
 import org.mule.api.MuleException;
@@ -101,7 +100,7 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
     public void tearDown() throws MuleException, Exception {
         cleanUpSandboxes();
     }
-    
+
     @Test
     public void testSalesforce2Siebel() throws MuleException, Exception {
     	createTestDataInSalesforce();

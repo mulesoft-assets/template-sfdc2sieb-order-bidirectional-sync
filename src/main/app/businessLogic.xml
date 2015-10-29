@@ -258,7 +258,6 @@ payload when (payload is :array) otherwise [payload]
                         <dw:transform-message doc:name="Prepare Order">
                             <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
-%var toPeriod = (hours) -> "PT$(hours)H" as :period
 ---
 {
 	AccountId      : recordVars.salesforceAccount.Id,
@@ -266,8 +265,7 @@ payload when (payload is :array) otherwise [payload]
 	Status         : 'Draft',
 	Pricebook2Id   : p('sfdc.pricebook.id'),
 	SiebelOrder__c : payload.Id,
-	EffectiveDate  : (payload.'Order Date' as :localdatetime {format: "MM/dd/yyyy HH:mm:ss"}) ++ (p('sieb.timeOffset') as :timezone)
-	
+	EffectiveDate  : (payload.'Order Date' as :localdatetime {format: "MM/dd/yyyy HH:mm:ss"}) ++ (p('sieb.timeOffset') as :timezone)	
 } when (recordVars.salesforceOrder == null) 
 otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
                         </dw:transform-message>

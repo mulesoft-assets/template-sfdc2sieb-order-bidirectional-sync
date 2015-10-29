@@ -133,6 +133,12 @@ payload.Envelope.Body.notifications.Notification.sObject]]></dw:set-payload>
                 </siebel:query-business-components>
             </processor-chain>
         </poll>
+        <dw:transform-message doc:name="Transform Message">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload filter $.'Updated By' != p('sieb.integration.user.id')]]></dw:set-payload>
+        </dw:transform-message>
         <logger message="Count of Orders (sieb2sfdc): #[payload.size()]" level="INFO" doc:name="Log count"/>
 
         <batch:execute name="fromSiebelToSalesforceBatch" doc:name="fromSiebelToSalesforceBatch"/>
