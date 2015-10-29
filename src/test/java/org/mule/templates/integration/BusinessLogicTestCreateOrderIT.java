@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.mule.MessageExchangePattern;
 import org.mule.api.MuleException;
 import org.mule.api.lifecycle.InitialisationException;
+import org.mule.modules.siebel.api.model.response.CreateResult;
 import org.mule.processor.chain.SubflowInterceptingChainLifecycleWrapper;
 
 import com.mulesoft.module.batch.BatchTestHelper;
@@ -48,32 +49,35 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
 	public static final String SF_CONTRACT_ID = "80020000006qfIGAAY";
 	public static final String SF_PRICEBOOK_ID = "01s20000001SwEQAA0";
 	public static final String SF_PRICEBOOK_ENTRY_1 = "01u2000000WuI41AAF";
+	
+	public static final String SIEB_ACCOUNT_ID = "1-16RO7";
+	public static final String SIEB_PRODUCT_ID = "1-3QG3";
     
     private static List<String> ordersCreatedInSalesforce = new ArrayList<String>();
     private static List<String> ordersCreatedInSiebel = new ArrayList<String>();
     
     private BatchTestHelper batchTestHelper;
     private SubflowInterceptingChainLifecycleWrapper createOrderInSalesforceFlow;
-    private SubflowInterceptingChainLifecycleWrapper createOrderInSiebelFlow;
     private SubflowInterceptingChainLifecycleWrapper createOrderItemInSalesforceFlow;
-    private SubflowInterceptingChainLifecycleWrapper createOrderItemInSiebelFlow;
     private SubflowInterceptingChainLifecycleWrapper queryOrderInSalesforceFlow;
+    private SubflowInterceptingChainLifecycleWrapper queryOrderInSalesforceFlowById;
+    private SubflowInterceptingChainLifecycleWrapper deleteObjectFromSalesforceFlow;
+    
+    private SubflowInterceptingChainLifecycleWrapper createOrderInSiebelFlow;
+    private SubflowInterceptingChainLifecycleWrapper createOrderItemInSiebelFlow;
     private SubflowInterceptingChainLifecycleWrapper queryOrderInSiebelFlow;
     private SubflowInterceptingChainLifecycleWrapper queryOrderItemInSiebelFlow;
-    private SubflowInterceptingChainLifecycleWrapper deleteOrderInSalesforceFlow;
     private SubflowInterceptingChainLifecycleWrapper deleteOrderInSiebelFlow;
-
-    private SubflowInterceptingChainLifecycleWrapper queryOrderInSalesforceFlowById;
 
     @BeforeClass
     public static void beforeTestClass() {
-        // Set polling frequency to 10 seconds
-        System.setProperty("poll.frequency", "10000");
+        System.setProperty("poll.frequencyMillis", "10000");
+        System.setProperty("poll.startDelayMillis", "500");
         System.setProperty("mule.test.timeoutSecs", "180");
         
-		DateTime now = new DateTime(DateTimeZone.UTC);
-		DateTimeFormatter dateFormat = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-		System.setProperty("watermark.default.expression.sfdc", now.toString(dateFormat));
+		DateTimeFormatter dateFormatSfdc = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+		System.setProperty("watermark.default.expression.sfdc", new DateTime(DateTimeZone.UTC).minusMinutes(1).toString(dateFormatSfdc));
+		System.setProperty("watermark.default.expression.sieb", Long.toString(new DateTime().minusHours(8).toDate().getTime()));
     }
 
     @Before
@@ -81,52 +85,62 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         stopAutomaticPollTriggering();
         getAndInitializeFlows();
         batchTestHelper = new BatchTestHelper(muleContext);
-        createTestData();
     }
 
 	@AfterClass
     public static void shutDown() {
-        System.clearProperty("poll.frequency");
+        System.clearProperty("poll.frequencyMillis");
+        System.clearProperty("poll.startDelayMillis");
+        System.clearProperty("mule.test.timeoutSecs");
         System.clearProperty("watermark.default.expression.sfdc");
         System.clearProperty("watermark.default.expression.sieb");
     }
 
     @After
     public void tearDown() throws MuleException, Exception {
-        cleanUpSandboxesByRemovingTestContacts();
+        cleanUpSandboxes();
     }
+    
+    @Test
+    public void testSalesforce2Siebel() throws MuleException, Exception {
+    	createTestDataInSalesforce();
+    	
+        // Execution
+        executeWaitAndAssertBatchJob(SALESFORCE_INBOUND_FLOW_NAME);
+
+        Map<String, Object> sfdcOrderResponse = (Map<String, Object>) queryOrderInSalesforceFlowById.process(getTestEvent(ordersCreatedInSalesforce.get(0))).getMessage().getPayload();
+        ArrayList<HashMap<String, Object>> siebOrderResponse = (ArrayList<HashMap<String, Object>>) queryOrderInSiebelFlow.process(getTestEvent(sfdcOrderResponse.get("OrderNumber"))).getMessage().getPayload();
+        Assert.assertEquals("There should be one order synced in Siebel", 1, siebOrderResponse.size());
+        
+        String siebelOrderId = (String) siebOrderResponse.get(0).get("Id");
+		ordersCreatedInSiebel.add(siebelOrderId);
+        
+		ArrayList<HashMap<String, Object>> resp3 = (ArrayList<HashMap<String, Object>>) queryOrderItemInSiebelFlow.process(getTestEvent(siebelOrderId)).getMessage().getPayload();
+        Assert.assertEquals("There should be one order line item synced in Siebel", 1, resp3.size());
+    }
+    
+    @Test
+    public void testSiebel2Salesforce() throws MuleException, Exception {
+    	createTestDataInSiebel();
+    	
+    	// Execution
+        executeWaitAndAssertBatchJob(SIEBEL_INBOUND_FLOW_NAME);
+        
+        Map<String, Object> sfdcOrderResponse = (Map<String, Object>) queryOrderInSalesforceFlow.process(getTestEvent(ordersCreatedInSiebel.get(0))).getMessage().getPayload();
+        Assert.assertNotNull("There should be one order synced in Salesforce", sfdcOrderResponse);
+        Assert.assertEquals("There should be one order item synced in Salesforce", "1", ((Map<String,Object>) sfdcOrderResponse.get("OrderItems")).get("size"));
+        
+        ordersCreatedInSalesforce.add((String)sfdcOrderResponse.get("Id"));
+    }
+    
 
     private void stopAutomaticPollTriggering() throws MuleException {
         stopFlowSchedulers(SALESFORCE_INBOUND_FLOW_NAME);
         stopFlowSchedulers(SIEBEL_INBOUND_FLOW_NAME);
     }
+    
 
-    private void getAndInitializeFlows() throws InitialisationException {
-        // Flow for creating contacts in Salesforce
-    	createOrderInSalesforceFlow = getSubFlow("createOrderInSalesforceFlow");
-    	createOrderInSalesforceFlow.initialise();
-    	createOrderInSiebelFlow = getSubFlow("createOrderInSiebelFlow");
-    	createOrderInSiebelFlow.initialise();
-    	createOrderItemInSalesforceFlow = getSubFlow("createOrderItemInSalesforceFlow");
-    	createOrderItemInSalesforceFlow.initialise();
-    	createOrderItemInSiebelFlow = getSubFlow("createOrderItemInSiebelFlow");
-    	createOrderItemInSiebelFlow.initialise();
-    	queryOrderInSalesforceFlow = getSubFlow("queryOrderInSalesforceFlow");
-    	queryOrderInSalesforceFlow.initialise();
-    	queryOrderInSiebelFlow = getSubFlow("queryOrderInSiebelFlow");
-    	queryOrderInSiebelFlow.initialise();
-    	queryOrderItemInSiebelFlow = getSubFlow("queryOrderItemInSiebelFlow");
-    	queryOrderItemInSiebelFlow.initialise();
-    	deleteOrderInSalesforceFlow = getSubFlow("deleteOrderInSalesforceFlow");
-    	deleteOrderInSalesforceFlow.initialise();
-    	deleteOrderInSiebelFlow = getSubFlow("deleteOrderInSiebelFlow");
-    	deleteOrderInSiebelFlow.initialise();
-    	queryOrderInSalesforceFlowById = getSubFlow("queryOrderInSalesforceFlowById");
-    	queryOrderInSalesforceFlowById.initialise();
-    }
-
-    private void executeWaitAndAssertBatchJob(String flowConstructName)
-            throws Exception {
+    private void executeWaitAndAssertBatchJob(String flowConstructName) throws Exception {
 
         // Execute synchronization
         runSchedulersOnce(flowConstructName);
@@ -136,25 +150,29 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         batchTestHelper.assertJobWasSuccessful();
     }
     
-    private void cleanUpSandboxesByRemovingTestContacts()
-            throws MuleException, Exception {
+    private void cleanUpSandboxes() throws MuleException, Exception {
 
         final List<String> idList = new ArrayList<String>();
-
-        for (String item : ordersCreatedInSalesforce) {
-            idList.add(item);
-        }
-
-        deleteOrderInSalesforceFlow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));
-        idList.clear();
-
+        
+        // delete orders from Salesforce
+        if (!ordersCreatedInSalesforce.isEmpty()) {
+        	for (String item : ordersCreatedInSalesforce) {
+                idList.add(item);
+            }
+        	deleteObjectFromSalesforceFlow.process(getTestEvent(idList, MessageExchangePattern.REQUEST_RESPONSE));
+        	idList.clear();
+		}
+        
+        // delete Orders from Siebel
         for (String item : ordersCreatedInSiebel) {
             deleteOrderInSiebelFlow.process(getTestEvent(item, MessageExchangePattern.REQUEST_RESPONSE));
         }
-
+        
+        ordersCreatedInSalesforce.clear();
+        ordersCreatedInSiebel.clear();
     }
 
-    private void createTestData() throws MuleException, Exception {
+    private void createTestDataInSalesforce() throws MuleException, Exception {
         Map<String, Object> sfOrder = new HashMap<String, Object>();
         sfOrder.put("EffectiveDate", new Date());  
         sfOrder.put("Status", "Draft");  
@@ -163,49 +181,78 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
 		sfOrder.put("AccountId", SF_ACCOUNT_ID);
 		sfOrder.put("Description", "sfdc2sieb-order-bidirectional " + new Date(System.currentTimeMillis()));
         
-		SaveResult res = (SaveResult) createOrderInSalesforceFlow.process(getTestEvent(sfOrder)).getMessage().getPayload();
-		sfOrder.put("Id", res.getId());
-		ordersCreatedInSalesforce.add(res.getId());
-		LOGGER.info("Order saved " + res.getId());
+		SaveResult salesforceOrderResponse = (SaveResult) createOrderInSalesforceFlow.process(getTestEvent(sfOrder)).getMessage().getPayload();
+		sfOrder.put("Id", salesforceOrderResponse.getId());
+		ordersCreatedInSalesforce.add(salesforceOrderResponse.getId());
+		LOGGER.info("Order saved " + salesforceOrderResponse.getId());
 		
 		Map<String, Object> sfOrderItem = new HashMap<String, Object>();
 		sfOrderItem.put("OrderId", sfOrder.get("Id"));
 		sfOrderItem.put("Quantity", "1");
 		sfOrderItem.put("UnitPrice", "100");
 		sfOrderItem.put("PricebookEntryId", SF_PRICEBOOK_ENTRY_1);
-		SaveResult res1 = (SaveResult) createOrderItemInSalesforceFlow.process(getTestEvent(sfOrderItem)).getMessage().getPayload();
-		sfOrderItem.put("Id", res1.getId());
+		
+		SaveResult salesforceOrderItemResponse = (SaveResult) createOrderItemInSalesforceFlow.process(getTestEvent(sfOrderItem)).getMessage().getPayload();
+		sfOrderItem.put("Id", salesforceOrderItemResponse.getId());
 
-		LOGGER.info("Order item saved " + res1.getId());
+		LOGGER.info("Order item saved " + salesforceOrderItemResponse.getId());
     }
     
-    @Test
-    public void testMainFlow() throws MuleException, Exception {
-    	
-        // Execution
-        executeWaitAndAssertBatchJob(SALESFORCE_INBOUND_FLOW_NAME);
-
-        Map<String, Object> query1 = new HashMap<String, Object>();
-        query1.put("Id", ordersCreatedInSalesforce.get(0));
-        HashMap resp1 = (HashMap) queryOrderInSalesforceFlowById.process(getTestEvent(query1)).getMessage().getPayload();
-        LOGGER.info(resp1);
-
-        Map<String, Object> query2 = new HashMap<String, Object>();
-        query2.put("OrderNumber", resp1.get("OrderNumber"));
-        ArrayList<HashMap<String, Object>> resp2 = (ArrayList<HashMap<String, Object>>) queryOrderInSiebelFlow.process(getTestEvent(query2)).getMessage().getPayload();
-        LOGGER.info(resp2);
+    private void createTestDataInSiebel() throws MuleException, Exception {
+    	// order
+    	Map<String, Object> siebOrder = new HashMap<String, Object>();
+        siebOrder.put("Currency Code", "USD");  
+        siebOrder.put("Order Type", "Sales Order");  
+        siebOrder.put("Account Id", SIEB_ACCOUNT_ID);
         
-        Assert.assertEquals("There should be one order synced in Siebel", 1, resp2.size());
-        String id = (String) resp2.get(0).get("Id");
-		ordersCreatedInSiebel.add(id);
-        
-		Map<String, Object> query3 = new HashMap<String, Object>();
-		query3.put("Id", id);
-		ArrayList<HashMap<String, Object>> resp3 = (ArrayList<HashMap<String, Object>>) queryOrderItemInSiebelFlow.process(getTestEvent(query3)).getMessage().getPayload();
-		LOGGER.info("order items " + resp3);
+        CreateResult orderResponse = (CreateResult) createOrderInSiebelFlow.process(getTestEvent(siebOrder)).getMessage().getPayload();
+		siebOrder.put("Id", orderResponse.getCreatedObjects().get(0));
+		ordersCreatedInSiebel.add((String)siebOrder.get("Id"));
+		LOGGER.info("Order saved " + siebOrder.get("Id"));
 		
-		// Assertions
-        Assert.assertEquals("There should be one order line item synced in Siebel", 1, resp3.size());
+		// order item
+		Map<String, Object> siebOrderItem = new HashMap<String, Object>();
+		siebOrderItem.put("Order Header Id", siebOrder.get("Id"));
+		siebOrderItem.put("Quantity Requested", "1");
+		siebOrderItem.put("Extended Quantity", "1");
+		siebOrderItem.put("Net Price", "100");
+		siebOrderItem.put("Currency Code", "USD");
+		siebOrderItem.put("Product Id", SIEB_PRODUCT_ID);
+		
+		CreateResult orderItemResponse = (CreateResult) createOrderItemInSiebelFlow.process(getTestEvent(siebOrderItem)).getMessage().getPayload();
+		siebOrderItem.put("Id", orderItemResponse.getCreatedObjects().get(0));
+		LOGGER.info("Order item saved " + siebOrderItem.get("Id"));
     }
-
+    
+    private void getAndInitializeFlows() throws InitialisationException {
+    	createOrderInSalesforceFlow = getSubFlow("createOrderInSalesforceFlow");
+    	createOrderInSalesforceFlow.initialise();
+    	
+    	createOrderInSiebelFlow = getSubFlow("createOrderInSiebelFlow");
+    	createOrderInSiebelFlow.initialise();
+    	
+    	createOrderItemInSalesforceFlow = getSubFlow("createOrderItemInSalesforceFlow");
+    	createOrderItemInSalesforceFlow.initialise();
+    	
+    	createOrderItemInSiebelFlow = getSubFlow("createOrderItemInSiebelFlow");
+    	createOrderItemInSiebelFlow.initialise();
+    	
+    	queryOrderInSalesforceFlow = getSubFlow("queryOrderInSalesforceFlow");
+    	queryOrderInSalesforceFlow.initialise();
+    	
+    	queryOrderInSiebelFlow = getSubFlow("queryOrderInSiebelFlow");
+    	queryOrderInSiebelFlow.initialise();
+    	
+    	queryOrderItemInSiebelFlow = getSubFlow("queryOrderItemInSiebelFlow");
+    	queryOrderItemInSiebelFlow.initialise();
+    	
+    	deleteObjectFromSalesforceFlow = getSubFlow("deleteObjectFromSalesforceFlow");
+    	deleteObjectFromSalesforceFlow.initialise();
+    	
+    	deleteOrderInSiebelFlow = getSubFlow("deleteOrderInSiebelFlow");
+    	deleteOrderInSiebelFlow.initialise();
+    	
+    	queryOrderInSalesforceFlowById = getSubFlow("queryOrderInSalesforceFlowById");
+    	queryOrderInSalesforceFlowById.initialise();
+    }
 }

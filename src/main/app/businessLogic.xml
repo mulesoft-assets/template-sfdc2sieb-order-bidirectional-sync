@@ -1,33 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:spring="http://www.springframework.org/schema/beans" xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
-	  xmlns:json="http://www.mulesoft.org/schema/mule/json"
-	  xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel" 
-	  xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" 
-	  xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc"
-      xmlns="http://www.mulesoft.org/schema/mule/core"
-      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-      version="EE-3.6.2"
-      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
+	xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" 
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
+	xmlns:json="http://www.mulesoft.org/schema/mule/json"
+	xmlns:siebel="http://www.mulesoft.org/schema/mule/siebel" 
+	xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/siebel/current/mule-siebel.xsd
-http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
-http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd">
-    <data-mapper:config name="Order_To_Order" transformationGraphPath="order_to_order.grf" doc:name="Order_To_Order"/>
-    <data-mapper:config name="Map_To_OrderItem" transformationGraphPath="map_to_orderitem.grf" doc:name="Map_To_OrderItem"/>
-    <data-mapper:config name="Map_To_Order_1" transformationGraphPath="map_to_order_1.grf" doc:name="Map_To_Order_1"/>
-    <data-mapper:config name="MACD_Performance_Order_MACD_Order_Entry___Line_Items_To_OrderItem" transformationGraphPath="macd_performance_order.macd_order_entry_-_line_items_to_orderitem.grf" doc:name="MACD_Performance_Order_MACD_Order_Entry___Line_Items_To_OrderItem"/>
-    <data-mapper:config name="Order_Entry_Order_Entry___Orders_To_Order" transformationGraphPath="order_entry.order_entry_-_orders_to_order.grf" doc:name="Order_Entry_Order_Entry___Orders_To_Order"/>
-    <batch:job name="fromSalesforceToSiebelBatch">
-        <batch:threading-profile poolExhaustedAction="WAIT"/>
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
+    
+<batch:job name="fromSalesforceToSiebelBatch">
         <batch:process-records>
-            <batch:step name="forEachOrderGetExistingOrderInSiebelStep">
-                <logger message="Salesforce order #[payload]" level="INFO" doc:name="Logger"/>
-                <enricher source="#[payload.isEmpty() ? NullPayload.getInstance() : payload[0]]" target="#[recordVars['siebelOrder']]" doc:name="store result in 'siebelOrder'">
-                    <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" searchExpression="[Order Number] = '#[payload['OrderNumber']]'" doc:name="Query Siebel Order">
+            <batch:step name="getExistingOrderInSiebelStep">
+                <logger message="Salesforce order #[payload]" level="INFO" doc:name="Log SFDC Order"/>
+                <enricher source="#[payload.isEmpty() ? null : payload[0]]" target="#[recordVars.siebelOrder]" doc:name="store result in 'siebelOrder'">
+                    <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" searchExpression="[Order Number] = '#[payload.OrderNumber]'" doc:name="Query Siebel Order">
                         <siebel:fields-to-retrieve>
                             <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
                             <siebel:fields-to-retrieve>Updated</siebel:fields-to-retrieve>
@@ -36,11 +33,11 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                         </siebel:fields-to-retrieve>
                     </siebel:query-business-components>
                 </enricher>
-                <logger message="Existing siebelOrder #[recordVars['siebelOrder']]" level="INFO" doc:name="Logger"/>
+                <logger message="Existing siebelOrder #[recordVars.siebelOrder]" level="INFO" doc:name="Log existing Siebel Order"/>
             </batch:step>
-            <batch:step name="forEachOrderCreateAccountinSiebelStep">
-                <enricher source="#[payload.isEmpty() ? NullPayload.getInstance() : payload[0]]" target="#[recordVars['siebelAccount']]" doc:name="store siebel Account in 'siebelAccount'">
-                    <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Account.Account" searchExpression="[Name] = '#[payload['Account']['Name']]'" doc:name="Query Accounts from Siebel">
+            <batch:step name="createAccountinSiebelStep">
+                <enricher source="#[payload.isEmpty() ? null : payload[0]]" target="#[recordVars.siebelAccount]" doc:name="store siebel Account in 'siebelAccount'">
+                    <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Account.Account" searchExpression="[Name] = '#[payload.Account.Name]'" doc:name="Query Accounts from Siebel">
                         <siebel:fields-to-retrieve>
                             <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
                             <siebel:fields-to-retrieve>Name</siebel:fields-to-retrieve>
@@ -49,20 +46,25 @@ http://www.springframework.org/schema/beans http://www.springframework.org/schem
                         </siebel:fields-to-retrieve>
                     </siebel:query-business-components>
                 </enricher>
-                <choice doc:name="Choice">
-                    <when expression="#[recordVars['siebelAccount'] is NullPayload]">
-                        <enricher source="#[payload]" target="#[recordVars['siebelAccount']]" doc:name="store Account in 'siebelAccount'">
+                <choice doc:name="Does account need to be created?">
+                    <when expression="#[recordVars.siebelAccount == null]">
+                        <enricher source="#[payload]" target="#[recordVars.siebelAccount]" doc:name="store Account in 'siebelAccount'">
                             <processor-chain doc:name="createSiebelAccountStep">
                                 <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Account.Account" doc:name="Create Siebel Account">
                                     <siebel:business-component-fields>
-                                        <siebel:business-component-field key="Name">#[payload['Account']['Name']]</siebel:business-component-field>
+                                        <siebel:business-component-field key="Name">#[payload.Account.Name]</siebel:business-component-field>
                                     </siebel:business-component-fields>
                                 </siebel:create-business-component>
-                                <expression-component doc:name="Save result into payload"><![CDATA[// convert payload to hashMap
-String id = payload.getCreatedObjects().get(0);
-payload = new HashMap();
-payload.put("Id", id);]]></expression-component>
-                                <logger message="New acccount saved in Siebel #[payload]" level="INFO" doc:name="Logger"/>
+                                <dw:transform-message doc:name="Save result into payload">
+                                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	Id : payload.createdObjects[0]
+}]]></dw:set-payload>
+                                </dw:transform-message>
+
+                                <logger message="New acccount saved in Siebel #[payload]" level="INFO" doc:name="Log the Id of the new Account"/>
                             </processor-chain>
                         </enricher>
                     </when>
@@ -73,105 +75,115 @@ payload.put("Id", id);]]></expression-component>
 
             
             </batch:step>
-            <batch:step name="forEachOrderUpsertSiebelOrderStep" accept-expression="recordVars['siebelOrder'] is NullPayload || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars['siebelOrder']['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate'])) &amp;&amp; '${sfdc.integration.user.id}' != payload['LastModifiedById']">
+            <batch:step name="upsertSiebelOrderStep" accept-expression="recordVars.siebelOrder == null || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars.siebelOrder.Updated, 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload.LastModifiedDate))">
 
-                <choice doc:name="Choice">
-                    <when expression="recordVars['siebelOrder'] is NullPayload">
-                        <enricher source="#[payload]" target="#[recordVars['upsertedSiebelOrder']]" doc:name="store insert result in 'upsertedSiebelOrder'">
+                <choice doc:name="Insert or update order?">
+                    <when expression="#[recordVars.siebelOrder == null]">
+                        <enricher source="#[payload]" target="#[recordVars.upsertedSiebelOrder]" doc:name="store insert result in 'upsertedSiebelOrder'">
                             <processor-chain doc:name="Processor Chain">
-                                <logger message="Insert #[recordVars['siebelAccount']] #[payload]" level="INFO" doc:name="Logger"/>
+                                <logger message="Insert Order #[payload] with #[recordVars.siebelAccount] Account" level="INFO" doc:name="Log the inserting Order"/>
                                 <siebel:upsert-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" doc:name="Insert Order in Siebel">
                                     <siebel:business-component-fields>
                                         <siebel:business-component-field key="Order Type">Sales Order</siebel:business-component-field>
                                         <siebel:business-component-field key="Currency Code">USD</siebel:business-component-field>
-                                        <siebel:business-component-field key="Account Id">#[recordVars['siebelAccount']['Id']]</siebel:business-component-field>
-                                        <siebel:business-component-field key="Order Number">#[payload['OrderNumber']]</siebel:business-component-field>
+                                        <siebel:business-component-field key="Account Id">#[recordVars.siebelAccount.Id]</siebel:business-component-field>
+                                        <siebel:business-component-field key="Order Number">#[payload.OrderNumber]</siebel:business-component-field>
                                     </siebel:business-component-fields>
                                 </siebel:upsert-business-component>
+                                <dw:transform-message doc:name="Save result into payload">
+                                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	Id : payload.createdObjects[0]
+}]]></dw:set-payload>
+                                </dw:transform-message>
 
-                                <expression-component doc:name="Save result into payload"><![CDATA[// convert payload to hashMap
-String id = payload.getCreatedObjects().get(0);
-payload = new HashMap();
-payload.put("Id", id);]]></expression-component>
-                                <logger message="Inserted siebelOrder #[payload]" level="INFO" doc:name="Logger"/>
+                                <logger message="Inserted siebelOrder #[payload]" level="INFO" doc:name="Log the Id of the new Order"/>
                             </processor-chain>
                         </enricher>
                     </when>
                     <otherwise>
-                        <enricher source="#[payload]" target="#[recordVars['upsertedSiebelOrder']]" doc:name="store update result in 'upsertedSiebelOrder'">
+                        <enricher source="#[payload]" target="#[recordVars.upsertedSiebelOrder]" doc:name="store update result in 'upsertedSiebelOrder'">
                             <processor-chain doc:name="Processor Chain">
                                 <siebel:upsert-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Orders" doc:name="Update Order in Siebel">
                                     <siebel:business-component-fields>
                                         <siebel:business-component-field key="Order Type">Sales Order</siebel:business-component-field>
                                         <siebel:business-component-field key="Currency Code">USD</siebel:business-component-field>
-                                        <siebel:business-component-field key="Account Id">#[recordVars['siebelAccount']['Id']]</siebel:business-component-field>
-                                        <siebel:business-component-field key="Order Number">#[payload['OrderNumber']]</siebel:business-component-field>
-                                        <siebel:business-component-field key="Description">#[payload['Description']]</siebel:business-component-field>
-                                        <siebel:business-component-field key="Id">#[recordVars['siebelOrder']['Id']]</siebel:business-component-field>
+                                        <siebel:business-component-field key="Account Id">#[recordVars.siebelAccount.Id]</siebel:business-component-field>
+                                        <siebel:business-component-field key="Order Number">#[payload.OrderNumber]</siebel:business-component-field>
+                                        <siebel:business-component-field key="Description">#[payload.Description]</siebel:business-component-field>
+                                        <siebel:business-component-field key="Id">#[recordVars.siebelOrder.Id]</siebel:business-component-field>
                                     </siebel:business-component-fields>
                                 </siebel:upsert-business-component>
-                                <expression-component doc:name="Save result into payload"><![CDATA[// convert payload to hashMap
-String id = payload.getUpdatedObjects().get(0);
-payload = new HashMap();
-payload.put("Id", id);]]></expression-component>
-                                <logger message="Updated siebelOrder #[payload]" level="INFO" doc:name="Logger"/>
+                                <dw:transform-message doc:name="Save result into payload">
+                                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	Id : payload.updatedObjects[0]
+}]]></dw:set-payload>
+                                </dw:transform-message>
+
+                                <logger message="Updated siebelOrder #[payload]" level="INFO" doc:name="Log the Id of the updated Order"/>
                             </processor-chain>
                         </enricher>
                     </otherwise>
                 </choice>
-                <enricher source="#[payload]" target="#[recordVars['updateResult']]" doc:name="store result in 'updateResult'">
+                <enricher source="#[payload]"  doc:name="update SFDC Order 'externalId'" target="#[recordVars.updateResult]">
                     <sfdc:update-single config-ref="Salesforce" type="Order" doc:name="Update external id in Salesforce Order">
                         <sfdc:object>
-                            <sfdc:object key="SiebelOrder__c">#[recordVars['upsertedSiebelOrder']['Id']]</sfdc:object>
-                            <sfdc:object key="Id">#[payload['Id']]</sfdc:object>
+                            <sfdc:object key="SiebelOrder__c">#[recordVars.upsertedSiebelOrder.Id]</sfdc:object>
+                            <sfdc:object key="Id">#[payload.Id]</sfdc:object>
                         </sfdc:object>
                     </sfdc:update-single>
                 </enricher>
             </batch:step>
-            <batch:step name="deleteLineItemsInSiebelStep" accept-expression="recordVars['siebelOrder'] is NullPayload || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars['siebelOrder']['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate'])) &amp;&amp; '${sfdc.integration.user.id}' != payload['LastModifiedById']">
+            <batch:step name="deleteLineItemsInSiebelStep" accept-expression="recordVars.siebelOrder == null || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars.siebelOrder.Updated, 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload.LastModifiedDate))">
                 <processor-chain doc:name="Delete Siebel Order LineItems">
-                    <logger message="Deleting Siebel Line items for #[recordVars['siebelOrder']]" level="INFO" doc:name="Logger"/>
-                    <choice doc:name="Choice">
-                        <when expression="#[recordVars['siebelOrder'] is NullPayload]">
+                    <logger message="Deleting Siebel Line items for #[recordVars.siebelOrder]" level="INFO" doc:name="Log Siebel Order before deleting the Line items"/>
+
+                    <choice doc:name="Check the existence of Order">
+                        <when expression="#[recordVars.siebelOrder == null]">
                             <logger message="Nothing to delete" level="INFO" doc:name="Do nothing"/>
                         </when>
                         <otherwise>
-                            <enricher source="#[payload]" target="#[recordVars['result']]" doc:name="Message Enricher">
+                            <enricher source="#[payload]" target="#[recordVars.result]" doc:name="Message Enricher">
                                 <processor-chain doc:name="Processor Chain">
-                                    <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" searchExpression="[Order Header Id] = '#[recordVars['siebelOrder']['Id']]'" doc:name="Oracle Siebel Business Object">
+                                    <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" searchExpression="[Order Header Id] = '#[recordVars.siebelOrder.Id]'" doc:name="Query Line Items">
                                         <siebel:fields-to-retrieve>
                                             <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
                                         </siebel:fields-to-retrieve>
                                     </siebel:query-business-components>
-                                    <foreach doc:name="For Each">
-                                        <siebel:delete-business-component config-ref="OracleSiebelBusinessObjects" businessComponentId="#[payload['Id']]" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" doc:name="Oracle Siebel Business Object"/>
+                                    <foreach doc:name="For Each Line Item">
+                                        <siebel:delete-business-component config-ref="OracleSiebelBusinessObjects" businessComponentId="#[payload.Id]" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" doc:name="Delete Line Item"/>
+                                        <logger message="Deleting line item result #[payload]" level="INFO" doc:name="Log the deleting Line Items result"/>
                                     </foreach>
-                                    <logger message="Deleting  line item result #[payload]" level="INFO" doc:name="Logger"/>
+
                                 </processor-chain>
                             </enricher>
                         </otherwise>
                     </choice>
                 </processor-chain>
             </batch:step>
-            <batch:step name="createLineItemsStep" accept-expression="recordVars['siebelOrder'] is NullPayload || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars['siebelOrder']['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate'])) &amp;&amp; '${sfdc.integration.user.id}' != payload['LastModifiedById']">
-                <choice doc:name="Choice">
+            <batch:step name="createLineItemsStep" accept-expression="recordVars['siebelOrder'] == null || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars['siebelOrder']['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate']))">
+                <choice doc:name="Check the existence of Order Items">
                     <when expression="#[payload['OrderItems'] != null]">
-                        <set-payload value="#[payload['OrderItems']['records']]" doc:name="Set Order LineItems to payload"/>
-                        <expression-component doc:name="Convert single hashmap to arraylist"><![CDATA[System.err.println("order item class " + payload.getClass());
-if(!(payload instanceof ArrayList))
-{
-    System.err.println("Converting map to array of map");
-	Object backup = payload;
-	payload = new ArrayList();
-	payload.add(backup);
-}
-]]></expression-component>
+                        <set-payload value="#[payload.OrderItems.records]" doc:name="Set Order LineItems to payload"/>
+                        <dw:transform-message doc:name="Transform single hashmap to arraylist">
+                            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload when (payload is :array) otherwise [payload]
+]]></dw:set-payload>
+                        </dw:transform-message>
+
                         <foreach doc:name="For Each Salesforce LineItem">
-                            <logger message="Salesforce order item to insert in Siebel #[payload]" level="INFO" doc:name="Log salesforce orderItem"/>
-                            <enricher source="#[payload]" target="#[recordVars['product']]" doc:name="store Salesforce Product in 'product'">
-                                <sfdc:query-single config-ref="Salesforce" query="Select p.Product2.SiebelExternalId__c, p.Product2.Name, p.Product2.Id, p.Product2Id From PricebookEntry p where p.Id = '#[payload['PricebookEntryId']]'" doc:name="Query Salesforce for Siebel Product External Id"/>
+                            <logger message="Salesforce order item to insert in Siebel #[payload]" level="INFO" doc:name="Log SFDC OrderItem for Insert"/>
+                            <enricher source="#[payload]" target="#[recordVars.product]" doc:name="store Salesforce Product in 'product'">
+                                <sfdc:query-single config-ref="Salesforce" query="Select p.Product2.SiebelExternalId__c, p.Product2.Name, p.Product2.Id, p.Product2Id From PricebookEntry p where p.Id = '#[payload.PricebookEntryId]'" doc:name="Query Salesforce for Siebel Product External Id"/>
                             </enricher>
-                            <logger message="Salesforce product found #[recordVars['product']]" level="INFO" doc:name="Logger"/>
+                            <logger message="Salesforce product found #[recordVars.product]" level="INFO" doc:name="Log the SFDC Product"/>
                             <siebel:create-business-component config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="MACD Performance Order.MACD Order Entry - Line Items" doc:name="Insert Siebel LineItem">
                                 <siebel:business-component-fields>
                                     <siebel:business-component-field key="Net Price">#[payload['UnitPrice']]</siebel:business-component-field>
@@ -182,7 +194,7 @@ if(!(payload instanceof ArrayList))
                                     <siebel:business-component-field key="Order Header Id">#[recordVars['upsertedSiebelOrder']['Id']]</siebel:business-component-field>
                                 </siebel:business-component-fields>
                             </siebel:create-business-component>
-                            <logger message="Siebel Line item created Id #[payload.getCreatedObjects().get(0)]" level="INFO" doc:name="Logger"/>
+                            <logger message="Siebel Line item created Id #[payload.getCreatedObjects().get(0)]" level="INFO" doc:name="Log the created LineItem Id"/>
                         </foreach>
                     </when>
                     <otherwise>
@@ -196,97 +208,119 @@ if(!(payload instanceof ArrayList))
             <expression-component doc:name="Release lock"><![CDATA[app.registry['PollSynchronizer'].unlock();]]></expression-component>
         </batch:on-complete>
     </batch:job>
+
     <batch:job name="fromSiebelToSalesforceBatch">
         <batch:threading-profile poolExhaustedAction="WAIT"/>
         <batch:process-records>
-            <batch:step name="forEachOrderInSiebelGetOrderInSalesforceStep">
-                <logger message="Siebel order #[payload]" level="INFO" doc:name="Logger"/>
-                <batch:set-record-variable variableName="siebelOrderId" value="#[payload['Id']]" doc:name="Set variable 'siebelOrderId' "/>
-                <enricher source="#[payload]" target="#[recordVars['salesforceOrder']]" doc:name="store result in 'salesforceOrder'">
-                    <sfdc:query-single config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.SiebelOrder__c = '#[payload['Id']]'" doc:name="Query Salesforce Order"/>
+            <batch:step name="getOrderInSalesforceStep">
+                <logger message="Siebel order #[payload]" level="INFO" doc:name="Log Siebel Order"/>
+                <batch:set-record-variable variableName="siebelOrderId" value="#[payload.Id]" doc:name="Set variable 'siebelOrderId' "/>
+                <enricher source="#[payload]" target="#[recordVars.salesforceOrder]" doc:name="store result in 'salesforceOrder'">
+                    <sfdc:query-single config-ref="Salesforce" query="Select o.Account.Name, o.AccountId, o.TotalAmount, o.OrderNumber, o.Name, o.LastModifiedDate, o.LastModifiedById, o.Id, o.Description, (Select Id, OrderId, PricebookEntryId, Quantity, UnitPrice, Description, OrderItemNumber From OrderItems) From Order o where o.SiebelOrder__c = '#[payload.Id]'" doc:name="Query Salesforce Order"/>
                 </enricher>
-                <logger message="Existing Salesforce Order result: #[recordVars['salesforceOrder']]" level="INFO" doc:name="Logger"/>
+                <logger message="Existing Salesforce Order result: #[recordVars.salesforceOrder]" level="INFO" doc:name="Log salesforceOrder"/>
             </batch:step>
-            <batch:step name="forEachOrderCreateAccountInSalesforceStep" accept-expression="payload['Account'] != ''" accept-policy="ALL">
-                <enricher source="#[payload]" target="#[recordVars['salesforceAccount']]" doc:name="store result in 'salesforceAccount'">
-                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#[payload[&quot;Account&quot;]]'" doc:name="Query Salesforce for existing Account"/>
+            <batch:step name="createAccountInSalesforceStep" accept-expression="payload.Account != ''" accept-policy="ALL">
+                <enricher source="#[payload]" target="#[recordVars.salesforceAccount]" doc:name="store result in 'salesforceAccount'">
+                    <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#[payload.Account]'" doc:name="Query Salesforce for existing Account"/>
                 </enricher>
-                <choice doc:name="Choice">
-                    <when expression="#[recordVars['salesforceAccount'] is NullPayload]">
-                        <enricher source="#[payload]" target="#[recordVars['salesforceAccount']]" doc:name="store result in 'salesforceAccount'">
+                <choice doc:name="Does account need to be created?">
+                    <when expression="#[recordVars.salesforceAccount == null]">
+                        <enricher source="#[payload]" target="#[recordVars.salesforceAccount]" doc:name="store result in 'salesforceAccount'">
                             <processor-chain doc:name="Processor Chain">
                                 <sfdc:create-single config-ref="Salesforce" type="Account" doc:name="Create Salesforce account">
                                     <sfdc:object>
-                                        <sfdc:object key="Name">#[payload['Account']]</sfdc:object>
+                                        <sfdc:object key="Name">#[payload.Account]</sfdc:object>
+
                                     </sfdc:object>
                                 </sfdc:create-single>
                                 <logger message="Account in salesforce created result #[payload]" level="INFO" doc:name="Log result"/>
-                                <expression-component doc:name="Save result into payload"><![CDATA[// convert payload to hashMap
-String id = payload.getId();
-payload = new HashMap();
-payload.put("Id", id);]]></expression-component>
+                                <dw:transform-message doc:name="Save result into payload">
+                                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	Id : payload.Id
+}]]></dw:set-payload>
+                                </dw:transform-message>
+
                             </processor-chain>
                         </enricher>
                     </when>
                     <otherwise>
-                        <logger message="Salesforce account exists do nothing" level="INFO" doc:name="Do nothing"/>
+                        <logger message="Salesforce account exists, doing nothing" level="INFO" doc:name="Do nothing"/>
                     </otherwise>
                 </choice>
             </batch:step>
-            <batch:step name="forEachOrderUpsertOrderInSalesforceStep" accept-expression="recordVars['salesforceOrder'] is NullPayload || org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(payload['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars['salesforceOrder']['LastModifiedDate'])) &amp;&amp; '${sieb.integration.user.id}' != payload['Updated By']">
-                <enricher source="#[payload]" target="#[recordVars['orderToUpsert']]" doc:name="store result in 'orderToUpsert'">
+            <batch:step name="upsertOrderInSalesforceStep" accept-expression="recordVars.salesforceOrder == null || org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(payload.Updated, 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVarssalesforceOrder.LastModifiedDate))">
+                <enricher source="#[payload]" target="#[recordVars.orderToUpsert]" doc:name="store result in 'orderToUpsert'">
                     <processor-chain doc:name="Processor Chain">
-                        <expression-component doc:name="Prepare Order for upsert"><![CDATA[if (recordVars['salesforceOrder'] instanceof NullPayload){
-    payload.put("SiebelOrder__c", payload['Id']);
-  	payload.put("Status", "Draft");  
-  	payload.put("ContractId", "${sfdc.contract.id}"); 
-  	payload.put("Pricebook2Id", "${sfdc.pricebook.id}"); 
-  	payload.put("EffectiveDate",org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset( payload['Order Date'], 'MM/dd/yyyy HH:mm:ss', '-09:00'));  
-    payload.put("AccountId", recordVars['salesforceAccount']['Id']);
-  	payload.remove("Id");
-} else {  
-  	payload.put("Id", recordVars['salesforceOrder']['Id']);  
-}]]></expression-component>
-                        <data-mapper:transform config-ref="Map_To_Order_1" doc:name="Map To Order"/>
+                        <expression-component doc:name="Expression"><![CDATA[payload.put("EffectiveDate",org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset( payload['Order Date'], 'MM/dd/yyyy HH:mm:ss', '-07:00').toDate());  
+]]></expression-component>
+                        <dw:transform-message doc:name="Prepare Order">
+                            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+%var toPeriod = (hours) -> "PT$(hours)H" as :period
+---
+{
+	AccountId      : recordVars.salesforceAccount.Id,
+	Name           : payload.Name,
+	Status         : 'Draft',
+	Pricebook2Id   : p('sfdc.pricebook.id'),
+	SiebelOrder__c : payload.Id,
+	EffectiveDate  : payload.EffectiveDate
+	
+} when (recordVars.salesforceOrder == null) 
+otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
+                        </dw:transform-message>
+                        <logger message="orderToUpsert: #[payload]" level="INFO" doc:name="Logger"/>
                     </processor-chain>
+
                 </enricher>
-                <choice doc:name="Choice">
-                    <when expression="#[recordVars['salesforceOrder'] is NullPayload]">
-                        <logger message="Before order insert #[payload]" level="INFO" doc:name="Log before insert"/>
-                        <enricher source="#[payload.getId()]" target="#[recordVars['orderId']]" doc:name="store result in 'orderId'">
+                <choice doc:name="Insert or update?" tracking:enable-default-events="true">
+                    <when expression="#[recordVars.salesforceOrder == null]">
+                        <logger message="Before order insert: #[payload]" level="INFO" doc:name="Log before insert"/>
+                        <enricher source="#[payload.getId()]" target="#[recordVars.orderId]" doc:name="store result in 'orderId'">
                             <processor-chain doc:name="Processor Chain">
                                 <sfdc:create-single config-ref="Salesforce" type="Order" doc:name="Insert single Order in Salesforce">
-                                    <sfdc:object ref="#[recordVars['orderToUpsert']]"/>
+                                    <sfdc:object ref="#[recordVars.orderToUpsert]"/>
                                 </sfdc:create-single>
-                                <logger message="Order inserted #[payload]" level="INFO" doc:name="Logger"/>
+
                             </processor-chain>
                         </enricher>
+
+
                     </when>
-                    <otherwise>
-                        <logger message="Before order update #[payload]" level="INFO" doc:name="Log before update"/>
-                        <enricher source="#[payload.getId()]" target="#[recordVars['orderId']]" doc:name="store result in 'orderId'">
+                    <otherwise >
+                        <logger message="Before order update: #[payload]" level="INFO" doc:name="Log before update"/>
+
+                        <enricher source="#[payload.getId()]" target="#[recordVars.orderId]" doc:name="store result in 'orderId'">
                             <processor-chain doc:name="Processor Chain">
                                 <sfdc:update-single config-ref="Salesforce" type="Order" doc:name="Update single Order in Salesforce">
-                                    <sfdc:object ref="#[recordVars['orderToUpsert']]"/>
+                                    <sfdc:object ref="#[recordVars.orderToUpsert]"/>
                                 </sfdc:update-single>
-                                <logger message="Order updated #[payload]" level="INFO" doc:name="Logger"/>
+
                             </processor-chain>
                         </enricher>
                     </otherwise>
                 </choice>
             </batch:step>
-            <batch:step name="deleteOrderItemsInSalesforceStep" accept-expression="recordVars['salesforceOrder'] is NullPayload || org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(payload['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars['salesforceOrder']['LastModifiedDate'])) &amp;&amp; '${sieb.integration.user.id}' != payload['Updated By']">
-                <choice doc:name="Choice">
-                    <when expression="#[!(recordVars['salesforceOrder'] is NullPayload)]">
+            <batch:step name="deleteOrderItemsInSalesforceStep" accept-expression="recordVars.salesforceOrder == null || org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(payload.Updated, 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars.salesforceOrder.LastModifiedDate))">
+                <choice doc:name="Did SFDC order exist before upsert?">
+                    <when expression="#[recordVars.salesforceOrder != null]">
                         <enricher source="#[payload]" target="#[recordVars['deleted']]" doc:name="store result in 'deleted'">
                             <processor-chain doc:name="Processor Chain">
-                                <sfdc:query config-ref="Salesforce" query="Select o.Id From OrderItem o where o.OrderId = '#[recordVars['salesforceOrder']['Id']]'" doc:name="Query existing Order items"/>
-                                <expression-component doc:name="Define new recordVar"><![CDATA[recordVars['toDelete'] = new ArrayList();]]></expression-component>
-                                <foreach doc:name="For Each">
-                                    <expression-component doc:name="Add IDs of Order items"><![CDATA[recordVars['toDelete'].add(payload.get("Id"));]]></expression-component>
-                                </foreach>
+                                <logger message="Querying SFDC order items for order #[recordVars.salesforceOrder]" level="INFO" doc:name="Logger"/>
+                                <sfdc:query config-ref="Salesforce" query="Select o.Id From OrderItem o where o.OrderId = '#[recordVars.salesforceOrder.Id]'" doc:name="Query existing Order items"/>
+                                <dw:transform-message doc:name="prepare request to delete order items">
+                                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload map $.Id]]></dw:set-payload>
+                                </dw:transform-message>
+
                                 <sfdc:delete config-ref="Salesforce" doc:name="Delete Order items">
-                                    <sfdc:ids ref="#[recordVars['toDelete']]"/>
+                                    <sfdc:ids ref="#[payload]"/>
                                 </sfdc:delete>
                                 <logger message="Deleted existing order items #[payload]" level="INFO" doc:name="Logger"/>
                             </processor-chain>
@@ -297,8 +331,9 @@ payload.put("Id", id);]]></expression-component>
                     </otherwise>
                 </choice>
             </batch:step>
-            <batch:step name="createOrderEntryStep" accept-expression="recordVars['salesforceOrder'] is NullPayload || org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(payload['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars['salesforceOrder']['LastModifiedDate'])) &amp;&amp; '${sieb.integration.user.id}' != payload['Updated By']">
-                <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Line Items" searchExpression="[Order Header Id] = '#[recordVars['siebelOrderId']]'" doc:name="Query Siebel LineItem">
+            <batch:step name="createOrderEntryStep" accept-expression="recordVars.salesforceOrder == null || org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(payload.Updated, 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVars.salesforceOrder.LastModifiedDate))">
+
+                <siebel:query-business-components config-ref="OracleSiebelBusinessObjects" businessObjectComponentType="Order Entry (Sales).Order Entry - Line Items" searchExpression="[Order Header Id] = '#[recordVars.siebelOrderId]'" doc:name="Query Siebel LineItem">
                     <siebel:fields-to-retrieve>
                         <siebel:fields-to-retrieve>Id</siebel:fields-to-retrieve>
                         <siebel:fields-to-retrieve>Quantity</siebel:fields-to-retrieve>
@@ -307,39 +342,56 @@ payload.put("Id", id);]]></expression-component>
                         <siebel:fields-to-retrieve>Net Price</siebel:fields-to-retrieve>
                     </siebel:fields-to-retrieve>
                 </siebel:query-business-components>
+
                 <foreach doc:name="For Each">
-                    <enricher source="#[payload]" target="#[recordVars['sfProduct']]" doc:name="store result in 'sfProduct'">
+                    <enricher source="#[payload]" target="#[recordVars.sfProduct]" doc:name="store result in 'sfProduct'">
                         <sfdc:query-single config-ref="Salesforce" query="SELECT Id, Name FROM Product2 WHERE SiebelExternalId__c = '#[payload['Product Id']]'" doc:name="Query Salesforce for Product"/>
                     </enricher>
-                    <enricher source="#[payload]" target="#[recordVars['sfPricebookEntry']]" doc:name="store result in 'pricebookEntry'">
+                    <enricher source="#[payload]" target="#[recordVars.sfPricebookEntry]" doc:name="store result in 'pricebookEntry'">
                         <processor-chain doc:name="get PriceBookEntry">
-                            <sfdc:query-single config-ref="Salesforce" query="Select p.Pricebook2Id, p.Id From PricebookEntry p where p.Pricebook2Id = '${sfdc.pricebook.id}' and p.Product2Id = '#[recordVars['sfProduct']['Id']]' " doc:name="Query Salesforce for PricebookEntry"/>
-                            <choice doc:name="Choice">
-                                <when expression="#[payload is NullPayload]">
+                            <sfdc:query-single config-ref="Salesforce" query="Select p.Pricebook2Id, p.Id From PricebookEntry p where p.Pricebook2Id = '${sfdc.pricebook.id}' and p.Product2Id = '#[recordVars.sfProduct.Id]' " doc:name="Query Salesforce for PricebookEntry"/>
+                            <choice doc:name="Does product need to be created?">
+                                <when expression="#[payload == null]">
                                     <sfdc:create-single config-ref="Salesforce" type="PricebookEntry" doc:name="Insert PriceBookEntry">
                                         <sfdc:object>
-                                            <sfdc:object key="Pricebook2Id">01s20000001SwEQ</sfdc:object>
                                             <sfdc:object key="IsActive">true</sfdc:object>
-                                            <sfdc:object key="Product2Id">#[recordVars['prod']['Id']]</sfdc:object>
+                                            <sfdc:object key="Product2Id">#[recordVars.prod.Id]</sfdc:object>
+                                            <sfdc:object key="Pricebook2Id">#[${sfdc.pricebook.id}]</sfdc:object>
+
                                         </sfdc:object>
                                     </sfdc:create-single>
-                                    <logger message="Created new pricebook #[payload]" level="INFO" doc:name="Logger"/>
-                                    <set-payload value="#[payload.getId()]" doc:name="Store insert result in payload"/>
+                                    <logger message="Created new pricebook entry #[payload]" level="INFO" doc:name="Log new pricebook entry"/>
+                                    <dw:transform-message doc:name="extract Id">
+                                        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload.id]]></dw:set-payload>
+                                    </dw:transform-message>
+
                                 </when>
                                 <otherwise>
-                                    <set-payload value="#[payload['Id']]" doc:name="Set Payload"/>
-                                    <logger message="Using existing pricebook pricebook #[payload] #[recordVars['sfProduct']] " level="INFO" doc:name="Logger"/>
+                                    <set-payload value="#[payload.Id]" doc:name="Set Payload"/>
+                                    <logger message="Using existing pricebook entry #[payload] #[recordVars.sfProduct] " level="INFO" doc:name="Log existing pricebook entry"/>
                                 </otherwise>
                             </choice>
                         </processor-chain>
                     </enricher>
-                    <data-mapper:transform config-ref="MACD_Performance_Order_MACD_Order_Entry___Line_Items_To_OrderItem" doc:name="MACD Performance Order.MACD Order Entry - Line Items To OrderItem"/>
-                    <expression-component doc:name="Prepare for insert"><![CDATA[payload.put("OrderId", recordVars['orderId']);
-payload.put("PricebookEntryId",recordVars['sfPricebookEntry']);
+                    <dw:transform-message doc:name="MACD Performance Order.MACD Order Entry - Line Items To OrderItem">
+                        <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	Description      : payload.Description,
+	Quantity         : payload.Quantity,
+	UnitPrice        : payload.'Net Price',
+	OrderId          : recordVars.orderId,
+	PricebookEntryId : recordVars.sfPricebookEntry
+}
 
+]]></dw:set-payload>
+                    </dw:transform-message>
 
-]]></expression-component>
-                    <logger message="Before order item insert  #[payload]" level="INFO" doc:name="Logger"/>
+                    <logger message="Before order item insert  #[payload]" level="INFO" doc:name="Log before insert"/>
                     <sfdc:create-single config-ref="Salesforce" type="OrderItem" doc:name="Insert Salesforce Order Item"/>
                     <logger message="Order item insert result #[payload]" level="INFO" doc:name="Log result"/>
                 </foreach>
