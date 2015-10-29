@@ -38,7 +38,6 @@
 	</build>
 
 	<dependencies>
-
 		<dependency>
 			<groupId>org.mule.modules</groupId>
 			<artifactId>siebel-businessobject</artifactId>
@@ -78,6 +77,12 @@
 			<artifactId>siebel-ji-enu</artifactId>
 			<version>8.1.1.11</version>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.mulesoft.weave</groupId>
+			<artifactId>mule-plugin-weave_2.11</artifactId>
+			<version>${mule.version}</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 
