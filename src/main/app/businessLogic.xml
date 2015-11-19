@@ -254,9 +254,8 @@ payload when (payload is :array) otherwise [payload]
             </batch:step>
             <batch:step name="upsertOrderInSalesforceStep" accept-expression="recordVars.salesforceOrder == null || org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(payload.Updated, 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(recordVarssalesforceOrder.LastModifiedDate))">
                 <enricher source="#[payload]" target="#[recordVars.orderToUpsert]" doc:name="store result in 'orderToUpsert'">
-                    <processor-chain doc:name="Processor Chain">
-                        <dw:transform-message doc:name="Prepare Order">
-                            <dw:set-payload><![CDATA[%dw 1.0
+                    <dw:transform-message doc:name="Prepare Order">
+                        <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
 ---
 {
@@ -268,10 +267,8 @@ payload when (payload is :array) otherwise [payload]
 	EffectiveDate  : (payload.'Order Date' as :localdatetime {format: "MM/dd/yyyy HH:mm:ss"}) ++ (p('sieb.timeOffset') as :timezone)	
 } when (recordVars.salesforceOrder == null) 
 otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
-                        </dw:transform-message>
-                        <logger message="orderToUpsert: #[payload]" level="INFO" doc:name="Logger"/>
+                    </dw:transform-message>
 
-                    </processor-chain>
 
                 </enricher>
                 <choice doc:name="Insert or update?" tracking:enable-default-events="true">
@@ -303,7 +300,7 @@ otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
                     <when expression="#[recordVars.salesforceOrder != null]">
                         <enricher source="#[payload]" target="#[recordVars['deleted']]" doc:name="store result in 'deleted'">
                             <processor-chain doc:name="Processor Chain">
-                                <logger message="Querying SFDC order items for order #[recordVars.salesforceOrder]" level="INFO" doc:name="Logger"/>
+
                                 <sfdc:query config-ref="Salesforce" query="Select o.Id From OrderItem o where o.OrderId = '#[recordVars.salesforceOrder.Id]'" doc:name="Query existing Order items"/>
                                 <dw:transform-message doc:name="prepare request to delete order items">
                                     <dw:set-payload><![CDATA[%dw 1.0
@@ -315,7 +312,7 @@ payload map $.Id]]></dw:set-payload>
                                 <sfdc:delete config-ref="Salesforce" doc:name="Delete Order items">
                                     <sfdc:ids ref="#[payload]"/>
                                 </sfdc:delete>
-                                <logger message="Deleted existing order items #[payload]" level="INFO" doc:name="Logger"/>
+                                <logger message="Deleted existing order items #[payload]" level="INFO" doc:name="Log deleted items"/>
                             </processor-chain>
                         </enricher>
                     </when>

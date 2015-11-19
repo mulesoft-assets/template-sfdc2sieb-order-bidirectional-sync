@@ -105,35 +105,11 @@ payload.Envelope.Body.notifications.Notification.sObject]]></dw:set-payload>
                         <siebel:fields-to-retrieve>Account</siebel:fields-to-retrieve>
                         <siebel:fields-to-retrieve>Order Date</siebel:fields-to-retrieve>
                         <siebel:fields-to-retrieve>Updated By</siebel:fields-to-retrieve>
-
-
-                    	<!-- 
-                        <siebel:fields-to-retrieve>Account Number</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Annual Revenue</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Bill To City</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Bill To Country</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Bill To Postal Code</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Bill To State</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Bill To Street Address</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Description</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Fax Number</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Last Update - SDQ</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Name</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Employees</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Phone Number</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Rate</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Ship To City</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Ship To Country</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Ship To Postal Code</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Ship To State</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Ship To Street Address</siebel:fields-to-retrieve>
-                        <siebel:fields-to-retrieve>Home Page</siebel:fields-to-retrieve>
-                    	 -->
                     </siebel:fields-to-retrieve>
                 </siebel:query-business-components>
             </processor-chain>
         </poll>
-        <dw:transform-message doc:name="Transform Message">
+        <dw:transform-message doc:name="Filter items">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
 ---
