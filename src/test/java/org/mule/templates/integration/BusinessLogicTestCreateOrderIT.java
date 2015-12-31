@@ -76,8 +76,8 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         System.setProperty("mule.test.timeoutSecs", "180");
         
 		DateTimeFormatter dateFormatSfdc = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-		System.setProperty("watermark.default.expression.sfdc", new DateTime(DateTimeZone.UTC).minusMinutes(1).toString(dateFormatSfdc));
-		System.setProperty("watermark.default.expression.sieb", Long.toString(new DateTime().minusHours(8).toDate().getTime()));
+		System.setProperty("watermark.default.expression.sfdc", new DateTime(DateTimeZone.UTC).minusMinutes(5).toString(dateFormatSfdc));
+		System.setProperty("watermark.default.expression.sieb", Long.toString(new DateTime().minusHours(10).toDate().getTime()));
     }
 
     @Before
