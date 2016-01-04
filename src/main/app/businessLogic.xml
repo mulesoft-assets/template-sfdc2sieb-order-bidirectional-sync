@@ -174,7 +174,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
                             <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
 ---
-payload when (payload is :array) otherwise [payload]
+payload when (payload is :array) otherwise ([payload] when (payload !=null) otherwise [])
 ]]></dw:set-payload>
                         </dw:transform-message>
 
