@@ -206,7 +206,10 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 + sfdc.securityToken `avsfwCUl7apQs56Xq2AKi3X`
 + sfdc.url `https://login.salesforce.com/services/Soap/u/32.0`
 
-+ sfdc.integration.user.id= `A0ed000BO9T`  
++ sfdc.integration.user.id= `A0ed000BO9T`
+
+	**Note:** To find out the correct *sfdc.integration.user.id* value, please, refer to example project **Salesforce Data Retrieval** in [Anypoint Exchange](http://www.mulesoft.org/documentation/display/current/Anypoint+Exchange).
+
 + sfdc.contract.id=80020000005mj5d  - id of existing contract which is used during Order creation
 + sfdc.pricebook.id=01s20000001SwEQAA0
 
