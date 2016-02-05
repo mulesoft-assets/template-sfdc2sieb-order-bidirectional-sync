@@ -16,8 +16,10 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
         <siebel:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
         <reconnect-forever />
     </siebel:config>
+    <sfdc:config name="TestSalesforceBasic" username="${test.sfdc.username}" password="${test.sfdc.password}" securityToken="${test.sfdc.securityToken}" url="${test.sfdc.url}" disableSessionInvalidation="true" doc:name="Salesforce: Basic Authentication"/>
+    	
 	<sub-flow name="createOrderInSalesforceFlow" >
-        <sfdc:create-single config-ref="Salesforce" type="Order" doc:name="Insert Order in Salesforce">
+        <sfdc:create-single config-ref="TestSalesforceBasic" type="Order" doc:name="Insert Order in Salesforce">
             <sfdc:object ref="#[payload]"/>
         </sfdc:create-single>
 
@@ -25,7 +27,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
 			level="INFO" doc:name="Logger" />
 	</sub-flow>
     <sub-flow name="createOrderItemInSalesforceFlow" >
-        <sfdc:create-single config-ref="Salesforce" type="OrderItem" doc:name="Insert Salesforce Order Item"/>
+        <sfdc:create-single config-ref="TestSalesforceBasic" type="OrderItem" doc:name="Insert Salesforce Order Item"/>
         <logger message="Create Salesforce Order Item result: #[payload]" level="INFO" doc:name="Logger"/>
     </sub-flow>
 	<sub-flow name="createOrderInSiebelFlow" >
