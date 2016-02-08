@@ -78,7 +78,7 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         
 		DateTimeFormatter dateFormatSfdc = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 		System.setProperty("watermark.default.expression.sfdc", new DateTime(DateTimeZone.UTC).minusMinutes(5).toString(dateFormatSfdc));
-		System.setProperty("watermark.default.expression.sieb", Long.toString(new DateTime().minusHours(10).toDate().getTime()));
+		System.setProperty("watermark.default.expression.sieb", Long.toString(new DateTime().minusHours(12).toDate().getTime()));
     }
 
     @Before
@@ -172,7 +172,6 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         
         // delete Orders and LineItems from Siebel
         for (String item : ordersCreatedInSiebel) {
-        	System.err.println("MAZEM MAZEM MAZEM MAZEM MAZEM MAZEM MAZEM " + item);
         	deleteLineItemsFromSiebelFlow.process(getTestEvent(item, MessageExchangePattern.REQUEST_RESPONSE));
             deleteOrderInSiebelFlow.process(getTestEvent(item, MessageExchangePattern.REQUEST_RESPONSE));
         }
