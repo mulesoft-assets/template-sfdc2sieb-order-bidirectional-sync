@@ -169,7 +169,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
             <batch:step name="createLineItemsStep" accept-expression="recordVars['siebelOrder'] == null || !org.mule.templates.date.DateUtils.stringToDateTimeWithProvidedOffset(recordVars['siebelOrder']['Updated'], 'MM/dd/yyyy HH:mm:ss', '${sieb.timeOffset}').isAfter(org.mule.templates.date.DateUtils.ISOStringDateToDateTime(payload['LastModifiedDate']))">
                 <choice doc:name="Check the existence of Order Items">
                     <when expression="#[payload['OrderItems'] != null]">
-                        <set-payload value="#[payload.OrderItems.records]" doc:name="Set Order LineItems to payload"/>
+                        <set-payload value="#[payload.OrderItems]" doc:name="Set Order LineItems to payload"/>
                         <dw:transform-message doc:name="Transform single hashmap to arraylist">
                             <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
@@ -220,7 +220,7 @@ payload when (payload is :array) otherwise ([payload] when (payload !=null) othe
                 </enricher>
                 <logger message="Existing Salesforce Order result: #[recordVars.salesforceOrder]" level="INFO" doc:name="Log salesforceOrder"/>
             </batch:step>
-            <batch:step name="createAccountInSalesforceStep" accept-expression="payload.Account != ''" accept-policy="ALL">
+            <batch:step name="createAccountInSalesforceStep" accept-expression="payload.Account != null" accept-policy="ALL">
                 <enricher source="#[payload]" target="#[recordVars.salesforceAccount]" doc:name="store result in 'salesforceAccount'">
                     <sfdc:query-single config-ref="Salesforce" query="SELECT Id,Name from Account where Name = '#[payload.Account]'" doc:name="Query Salesforce for existing Account"/>
                 </enricher>

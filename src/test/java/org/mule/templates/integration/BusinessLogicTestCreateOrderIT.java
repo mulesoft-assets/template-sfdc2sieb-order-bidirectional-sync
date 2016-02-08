@@ -68,6 +68,7 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
     private SubflowInterceptingChainLifecycleWrapper queryOrderInSiebelFlow;
     private SubflowInterceptingChainLifecycleWrapper queryOrderItemInSiebelFlow;
     private SubflowInterceptingChainLifecycleWrapper deleteOrderInSiebelFlow;
+    private SubflowInterceptingChainLifecycleWrapper deleteLineItemsFromSiebelFlow;
 
     @BeforeClass
     public static void beforeTestClass() {
@@ -128,8 +129,14 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         
         Map<String, Object> sfdcOrderResponse = (Map<String, Object>) queryOrderInSalesforceFlow.process(getTestEvent(ordersCreatedInSiebel.get(0))).getMessage().getPayload();
         Assert.assertNotNull("There should be one order synced in Salesforce", sfdcOrderResponse);
-        Assert.assertEquals("There should be one order item synced in Salesforce", "1", ((Map<String,Object>) sfdcOrderResponse.get("OrderItems")).get("size"));
-        
+                
+        if(sfdcOrderResponse.get("OrderItems") instanceof ArrayList ) {
+        	Assert.assertEquals("There should be one order item synced in Salesforce", 1,  ((ArrayList<Object>) sfdcOrderResponse.get("OrderItems")).size());
+        } else if (sfdcOrderResponse.get("OrderItems") instanceof Map) {
+        	Assert.assertEquals("There should be one order item synced in Salesforce", "1", ((Map<String,Object>) sfdcOrderResponse.get("OrderItems")).get("size"));
+        } else {
+        	Assert.fail("No line items found");
+        }
         ordersCreatedInSalesforce.add((String)sfdcOrderResponse.get("Id"));
     }
     
@@ -163,8 +170,10 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
         	idList.clear();
 		}
         
-        // delete Orders from Siebel
+        // delete Orders and LineItems from Siebel
         for (String item : ordersCreatedInSiebel) {
+        	System.err.println("MAZEM MAZEM MAZEM MAZEM MAZEM MAZEM MAZEM " + item);
+        	deleteLineItemsFromSiebelFlow.process(getTestEvent(item, MessageExchangePattern.REQUEST_RESPONSE));
             deleteOrderInSiebelFlow.process(getTestEvent(item, MessageExchangePattern.REQUEST_RESPONSE));
         }
         
@@ -254,5 +263,8 @@ public class BusinessLogicTestCreateOrderIT extends AbstractTemplateTestCase {
     	
     	queryOrderInSalesforceFlowById = getSubFlow("queryOrderInSalesforceFlowById");
     	queryOrderInSalesforceFlowById.initialise();
+    	
+    	deleteLineItemsFromSiebelFlow = getSubFlow("deleteLineItemsSiebelFlow");
+    	deleteLineItemsFromSiebelFlow.initialise();
     }
 }
