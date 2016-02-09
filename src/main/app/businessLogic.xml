@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" 
-	xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" 
 	xmlns:spring="http://www.springframework.org/schema/beans" 
 	xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
 	xmlns:json="http://www.mulesoft.org/schema/mule/json"
@@ -16,7 +15,6 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
 http://www.mulesoft.org/schema/mule/siebel http://www.mulesoft.org/schema/mule/siebel/current/mule-siebel.xsd
 http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
-http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
 http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
     
 <batch:job name="fromSalesforceToSiebelBatch">
@@ -271,7 +269,7 @@ otherwise {	Id : recordVars.salesforceOrder.Id }]]></dw:set-payload>
 
 
                 </enricher>
-                <choice doc:name="Insert or update?" tracking:enable-default-events="true">
+                <choice doc:name="Insert or update?">
                     <when expression="#[recordVars.salesforceOrder == null]">
                         <logger message="Before order insert: #[payload]" level="INFO" doc:name="Log before insert"/>
                         <enricher source="#[payload.getId()]" target="#[recordVars.orderId]" doc:name="store result in 'orderId'">
